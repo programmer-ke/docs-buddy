@@ -30,7 +30,7 @@ def clone_repository(url: str, target_dir: str):
     )
 
 
-def is_git_repository(directory: str) -> True:
+def is_git_repository(directory: str) -> bool:
     git_dir = Path(directory) / ".git"
     return git_dir.exists() and git_dir.is_dir()
 
