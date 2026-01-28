@@ -50,6 +50,10 @@ def extract_github_repo_suffix(url: str) -> str:
     >>> https_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
     >>> extract_github_repo_suffix(https_url)
     'programmer-ke/akash-docs-buddy'
+    >>>
+    >>> https_url = "https://github.com/owner/widget.git"
+    >>> extract_github_repo_suffix(https_url)
+    'owner/widget'
     """
     parsed = urlparse(url)
     is_ssh = parsed.netloc == "" and "@" in parsed.path
@@ -58,7 +62,7 @@ def extract_github_repo_suffix(url: str) -> str:
     else:
         # https
         suffix = parsed.path.lstrip("/")
-    return suffix.strip(".git")
+    return suffix.removesuffix(".git")
 
 
 if __name__ == "__main__":
