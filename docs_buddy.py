@@ -246,8 +246,8 @@ class FileSystemDocsStorage:
     """FileSystem implementation of DocsStorage protocol"""
 
     def __init__(self, source: PathLike, destination: PathLike):
-        self.destination = destination
-        self.source = source
+        self.destination = Path(destination)
+        self.source = Path(source)
 
     def destination_exists(self):
         return Path(self.destination).exists()
