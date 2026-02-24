@@ -1,4 +1,9 @@
-.PHONY: test
+.PHONY: all test mypy
+
+all:	test mypy
 
 test:
-	pytest --doctest-modules
+	pytest --doctest-modules *.py
+
+mypy:
+	mypy *.py

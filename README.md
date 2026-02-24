@@ -10,7 +10,9 @@ Helping you become proficient in the Akash Ecosystem.
 
 ### Updating the documentation
 
-Get the raw documentation files from a git repository.
+- Sync the repository
+- Extract the raw markdown doc files
+
 
 
 
