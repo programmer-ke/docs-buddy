@@ -245,6 +245,8 @@ class FakeDocsStorage:
 class FileSystemDocsStorage:
     """FileSystem implementation of DocsStorage protocol"""
 
+    DOC_EXTENSIONS = ("mdx", "md")
+
     def __init__(self, source: PathLike, destination: PathLike):
         self.destination = Path(destination)
         self.source = Path(source)
@@ -263,11 +265,10 @@ class FileSystemDocsStorage:
         self.destination.mkdir()
 
     def get_source_paths(self) -> Iterator[PathLike]:
-        doc_extensions = ("mdx", "md")
         source_directory_prefix = str(self.source) + "/"
         documentation_paths = (
             p
-            for ext in docs_extensions
+            for ext in self.DOC_EXTENSIONS
             for p in Path(repo_destination).rglob(f"*.{ext}")
         )
         for full_path in documentation_paths:
@@ -331,7 +332,6 @@ if __name__ == "__main__":
     repository_id = "akash-network/website"
     akash_website_url = f"https://github.com/{repository_id}.git"
     akash_documentation_prefix = akash_website_url.removesuffix(".git") + "/tree/main"
-    docs_extensions = ("mdx", "md")
     repo_destination = Path(".repos") / repository_id
     repo_storage = FileSystemRepoStorage(repo_destination)
     sync_repository(akash_website_url, repo_storage)
