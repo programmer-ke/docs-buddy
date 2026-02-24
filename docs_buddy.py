@@ -9,63 +9,322 @@ Major functionality
 - Answer queries from the documentation
 """
 
+from dataclasses import dataclass, asdict
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
+import json
+import shutil
+import os
+from typing import Union, Protocol, Iterator
 
 
-def sync_repository(url: str, target_dir: str):
-    is_already_cloned = is_git_repository(target_dir)
-    if is_already_cloned:
-        update_repository(target_dir)
+PathLike = str | os.PathLike
+
+
+class DocsBuddyError(Exception):
+    pass
+
+
+class RepositoryRefreshError(DocsBuddyError):
+    pass
+
+
+SAMPLE_DOC_1 = """\
+---
+title: Open Source Community
+description: Learn how Starlight can help you build greener documentation sites and reduce your carbon footprint.
+centeredHeader: true
+pubDate: "2020-01-19"
+---
+
+import CalenderButton from "../../../components/development-pages/calenderbutton.astro";
+import TimeZoneCalendar from "../../../components/development-pages/time-zone-calendar.tsx";
+import Welcome from "../../../components/development-pages/Welcome.astro";
+import GithubButton from "../../../components/mdx-cards/buttons/github-button.astro";
+import Calendar from "../../../components/development-pages/calendarModal.astro";
+
+<Welcome />
+
+## Getting started with contributing
+
+This is the starting point for joining and contributing to building Akash Network - committing code, writing docs, testing product features & reporting bugs, organizing meetups, suggesting ideas for new features, and more.
+
+The Akash Network community welcomes contributions from all skill levels. If you’re interested in contributing, visit our [project list](https://github.com/orgs/akash-network/projects) to find a project that matches your skillset.
+
+<Calendar />
+"""
+
+SAMPLE_DOC_2 = """\
+---
+title: "Akash Network Documentation"
+linkTitle: "Documentation"
+description: "Access comprehensive documentation to guide you through using Akash Network. Find detailed instructions, FAQs, and resources for a seamless experience."
+categories: ["Documentation"]
+---
+
+Welcome to the Akash Network Documentation!
+
+## Getting Started
+
+New to Akash? Start here:
+
+- **[What is Akash Network?](/docs/getting-started/what-is-akash)** - Learn about decentralized cloud computing
+- **[Core Concepts](/docs/getting-started/core-concepts)** - Understand how Akash works
+- **[Quick Start](/docs/getting-started/quick-start)** - Deploy your first app in under 10 minutes
+
+## Documentation Sections
+
+### Developers
+
+Deploy applications and build on Akash Network:
+
+- **[Getting Started](/docs/developers/getting-started)** - Choose your deployment method and get started
+- **[Deployment](/docs/developers/deployment)** - Console, CLI, SDKs, SDL, and AuthZ
+- **[Contributing](/docs/developers/contributing)** - Contribute to Akash codebase and documentation
+"""
+
+
+@dataclass(frozen=True)
+class RawDocument:
+    """Representation of an unprocessed document"""
+
+    content: str
+    path: str
+
+    def __str__(self):
+        return json.dumps(asdict(self))
+
+
+class RepoStorage(Protocol):
+    """Manages repository updates"""
+
+    def __init__(self, target: PathLike): ...
+
+    def is_already_cloned(self) -> bool: ...
+
+    def can_clone(self) -> bool: ...
+
+    def pull_repo(self): ...
+
+    def clone_repo(self, url: str): ...
+
+
+class FakeRepoStorage:
+    """Manages repository updates"""
+
+    def __init__(self, target: PathLike):
+        self.target = target
+        self.fake_is_cloned: bool
+        self.fake_can_clone: bool
+        self.actions: list = []
+
+    def is_already_cloned(self) -> bool:
+        return self.fake_is_cloned
+
+    def can_clone(self) -> bool:
+        return self.fake_can_clone
+
+    def clone_repo(self, url: str):
+        self.actions.append(("CLONE", url, self.target))
+
+    def pull_repo(self):
+        self.actions.append(("PULL",))
+
+
+class FileSystemRepoStorage:
+    """Manages repository updates"""
+
+    def __init__(self, target):
+        self.target = target
+
+    def is_already_cloned(self) -> bool:
+        return self._is_git_repository(self.target)
+
+    def pull_repo(self):
+        self._update_repository(self.target)
+
+    def clone_repo(self, url: str):
+        self._clone_repository(url, self.target)
+
+    def can_clone(self):
+        """Indicates whether we can clone a new repo in the target
+
+        Valid conditions:
+        - The target location doesn't exist (git will create it)
+        - The target location is an empty directory
+        """
+        path = Path(self.target)
+        return not path.exists() or self._is_empty_dir(path)
+
+    @staticmethod
+    def _is_empty_dir(path: Path) -> bool:
+        return path.is_dir() and not any(path.iterdir())
+
+    @staticmethod
+    def _is_git_repository(directory: str) -> bool:
+        git_dir = Path(directory) / ".git"
+        return git_dir.exists() and git_dir.is_dir()
+
+    @staticmethod
+    def _clone_repository(url: str, target_dir: str):
+        subprocess.run(
+            ["git", "clone", "--depth", "1", url, target_dir],
+            check=True,
+            capture_output=True,
+        )
+
+    @staticmethod
+    def _update_repository(directory: str):
+        subprocess.run(["git", "pull"], cwd=directory, check=True, capture_output=True)
+
+
+class DocsStorage(Protocol):
+    def __init__(self, source: PathLike, destination: PathLike): ...
+
+    def destination_exists(self) -> bool: ...
+
+    def create_destination(self): ...
+
+    def destination_empty(self) -> bool: ...
+
+    def clear_destination(self): ...
+
+    def get_source_paths(self) -> Iterator[PathLike]: ...
+
+    def read_from_source(self, path: PathLike) -> str: ...
+
+    def write_to_dest(self, content: str, path: PathLike): ...
+
+
+class FakeDocsStorage:
+    def __init__(self, source: PathLike, destination: PathLike):
+        self.destination = destination
+        self.actions: list = []
+        self.read_paths: set = set()
+        self.fake_destination_exists: bool
+        self.fake_destination_empty: bool
+        self.source = source
+
+        self.sources = {
+            "src/content/Docs/index.md": SAMPLE_DOC_2,
+            "src/content/Development_Page/welcome/index.mdx": SAMPLE_DOC_1,
+        }
+
+        self.sink: dict = {}
+
+    def destination_exists(self):
+        return self.fake_destination_exists
+
+    def create_destination(self):
+        self.actions.append(("MKDIR", self.destination))
+
+    def destination_empty(self) -> bool:
+        return self.fake_destination_empty
+
+    def clear_destination(self):
+        self.actions.append(("RMRF", self.destination))
+
+    def get_source_paths(self) -> Iterator[PathLike]:
+        for k in self.sources.keys():
+            yield Path(k)
+
+    def read_from_source(self, nested_path: PathLike) -> str:
+        key = str(nested_path)
+        self.read_paths.add(key)
+        return self.sources[key]
+
+    def write_to_dest(self, content: str, path: PathLike):
+        self.sink[str(path)] = content
+
+
+class FileSystemDocsStorage:
+    def __init__(self, source: PathLike, destination: PathLike):
+        self.destination = destination
+        self.source = source
+
+    def destination_exists(self):
+        return Path(self.destination).exists()
+
+    def create_destination(self):
+        self.destination.mkdir(parents=True)
+
+    def destination_empty(self) -> bool:
+        return self._is_empty_dir(Path(self.destination))
+
+    def clear_destination(self):
+        shutil.rmtree(self.destination)
+        self.destination.mkdir()
+
+    def get_source_paths(self) -> Iterator[PathLike]:
+        doc_extensions = ("mdx", "md")
+        source_directory_prefix = str(self.source) + "/"
+        documentation_paths = (
+            p
+            for ext in docs_extensions
+            for p in Path(repo_destination).rglob(f"*.{ext}")
+        )
+        for full_path in documentation_paths:
+            nested_path = str(full_path).removeprefix(source_directory_prefix)
+            yield nested_path
+
+    def read_from_source(self, nested_path: PathLike) -> str:
+        full_path = Path(self.source) / nested_path
+        return self._read_file(full_path)
+
+    def write_to_dest(self, content: str, path: PathLike):
+        full_path = Path(self.destination) / path
+        self._write_file(full_path, content)
+
+    @staticmethod
+    def _is_empty_dir(path: Path) -> bool:
+        return path.is_dir() and not any(path.iterdir())
+
+    @staticmethod
+    def _read_file(path: Path, encoding: str = "utf-8") -> str:
+        with open(path, "rt", encoding=encoding) as f:
+            return f.read()
+
+    @staticmethod
+    def _write_file(path: Path, content: str, encoding: str = "utf-8"):
+        with open(path, "wt", encoding=encoding) as f:
+            f.write(content)
+
+
+def sync_repository(url: str, storage: RepoStorage):
+    if storage.is_already_cloned():
+        storage.pull_repo()
+    elif storage.can_clone():
+        storage.clone_repo(url)
     else:
-        clone_repository(url, target_dir)
+        raise RepositoryRefreshError("Unable to refresh repository")
 
 
-def clone_repository(url: str, target_dir: str):
-    subprocess.run(
-        ["git", "clone", "--depth", "1", url, target_dir],
-        check=True,
-        capture_output=True,
-    )
+def extract_documentation(storage: DocsStorage):
+    if not storage.destination_exists():
+        storage.create_destination()
 
+    if not storage.destination_empty():
+        storage.clear_destination()
 
-def is_git_repository(directory: str) -> bool:
-    git_dir = Path(directory) / ".git"
-    return git_dir.exists() and git_dir.is_dir()
+    source_paths = storage.get_source_paths()
 
-
-def update_repository(directory: str):
-    subprocess.run(["git", "pull"], cwd=directory, check=True, capture_output=True)
-
-
-def extract_github_repo_suffix(url: str) -> str:
-    """
-    Extracts the repository suffix from a Github URL
-
-    >>> ssh_url = "git@github.com:programmer-ke/akash-docs-buddy.git"
-    >>> extract_github_repo_suffix(ssh_url)
-    'programmer-ke/akash-docs-buddy'
-    >>>
-    >>> https_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
-    >>> extract_github_repo_suffix(https_url)
-    'programmer-ke/akash-docs-buddy'
-    >>>
-    >>> https_url = "https://github.com/owner/widget.git"
-    >>> extract_github_repo_suffix(https_url)
-    'owner/widget'
-    """
-    parsed = urlparse(url)
-    is_ssh = parsed.netloc == "" and "@" in parsed.path
-    if is_ssh:
-        _, suffix = parsed.path.split(":")
-    else:
-        # https
-        suffix = parsed.path.lstrip("/")
-    return suffix.removesuffix(".git")
+    for p in source_paths:
+        content = storage.read_from_source(p)
+        document_key = str(p)
+        raw_doc = RawDocument(content, document_key)
+        dest_path = document_key.replace("/", "_")
+        storage.write_to_dest(str(raw_doc), Path(dest_path))
 
 
 if __name__ == "__main__":
-    akash_website_url = "https://github.com/akash-network/website.git"
-    destination = Path("/tmp") / extract_github_repo_suffix(akash_website_url)
-    sync_repository(akash_website_url, str(destination))
+    repository_id = "akash-network/website"
+    akash_website_url = f"https://github.com/{repository_id}.git"
+    akash_documentation_prefix = akash_website_url.removesuffix(".git") + "/tree/main"
+    docs_extensions = ("mdx", "md")
+    repo_destination = Path(".repos") / repository_id
+    repo_storage = FileSystemRepoStorage(repo_destination)
+    sync_repository(akash_website_url, repo_storage)
+    documents_destination = Path(".docs") / repository_id
+    docs_storage = FileSystemDocsStorage(repo_destination, documents_destination)
+    extract_documentation(docs_storage)
