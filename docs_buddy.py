@@ -180,6 +180,8 @@ class FileSystemRepoStorage:
 
 
 class DocsStorage(Protocol):
+    """Interface for extracting raw documents from storage repository"""
+
     def __init__(self, source: PathLike, destination: PathLike): ...
 
     def destination_exists(self) -> bool: ...
@@ -198,6 +200,8 @@ class DocsStorage(Protocol):
 
 
 class FakeDocsStorage:
+    """In-memory test implementation of DocsStorage protocol"""
+
     def __init__(self, source: PathLike, destination: PathLike):
         self.destination = destination
         self.actions: list = []
@@ -239,6 +243,8 @@ class FakeDocsStorage:
 
 
 class FileSystemDocsStorage:
+    """FileSystem implementation of DocsStorage protocol"""
+
     def __init__(self, source: PathLike, destination: PathLike):
         self.destination = destination
         self.source = source
@@ -292,6 +298,8 @@ class FileSystemDocsStorage:
 
 
 def sync_repository(url: str, storage: RepoStorage):
+    """Synchronizes a git repository to local storage"""
+
     if storage.is_already_cloned():
         storage.pull_repo()
     elif storage.can_clone():
@@ -301,6 +309,8 @@ def sync_repository(url: str, storage: RepoStorage):
 
 
 def extract_documentation(storage: DocsStorage):
+    """Extracts documentation source files from local repository"""
+
     if not storage.destination_exists():
         storage.create_destination()
 
