@@ -14,8 +14,6 @@ class RepositoryRefreshError(DocsBuddyError):
 class RepoStorage(Protocol):
     """Manages repository updates"""
 
-    def __init__(self, target: PathLike): ...
-
     def is_already_cloned(self) -> bool: ...
 
     def can_clone(self) -> bool: ...
@@ -27,8 +25,6 @@ class RepoStorage(Protocol):
 
 class DocsStorage(Protocol):
     """Interface for extracting raw documents from storage repository"""
-
-    def __init__(self, source: PathLike, destination: PathLike): ...
 
     def destination_exists(self) -> bool: ...
 
