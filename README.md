@@ -14,7 +14,8 @@ Helping you become proficient in the Akash Ecosystem.
 - Extract the raw markdown doc files
 
 
+## Design
 
+Detailed design can be found in the [design doc][design]
 
-
-
+[design]: docs/design.md

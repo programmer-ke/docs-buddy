@@ -1,9 +1,9 @@
 .PHONY: all test mypy
 
-all:	test mypy
+all: test mypy
 
 test:
-	pytest --doctest-modules *.py
+	pytest tests/
 
 mypy:
-	mypy *.py
+	mypy src/docs_buddy/ tests/
