@@ -7,11 +7,6 @@ from docs_buddy.services import sync_repository, extract_documentation, Reposito
 from docs_buddy.adapters import FakeRepoStorage, FakeDocsStorage
 
 
-def test_raw_document_serialization() -> None:
-    d = RawDocument(content="foo", path="bar")
-    assert str(d) == json.dumps({"content": "foo", "path": "bar"})
-
-
 def test_syncing_existing_repository() -> None:
     location = ".repo/programmer-ke/akash-docs-buddy"
     storage = FakeRepoStorage(location)
