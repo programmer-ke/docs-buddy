@@ -1,6 +1,9 @@
-# Akash Docs Buddy
+# Docs Buddy
 
-Helping you become proficient in the Akash Ecosystem.
+Navigate docs like a Pro.
+
+Use AI magic to help you find answers from Markdown documentation in a
+git repository.
 
 ## Major functionality
 
