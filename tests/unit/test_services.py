@@ -49,36 +49,77 @@ def test_syncing_non_existent_repo_and_cannot_clone() -> None:
     assert len(storage.actions) == 0
 
 
-def test_document_extraction_directory_creation() -> None:
+def test_document_extraction_existing_content_replaced() -> None:
     destination = ".docs/programmer-ke/akash-docs-buddy"
     source = ".repo/programmer-ke/akash-docs-buddy"
     storage = FakeDocsStorage(source, destination)
-    storage.fake_destination_exists = False
-    storage.fake_destination_empty = True
+
+    existing_content = {
+        "old_path_1.json": json.dumps(
+            {"content": "old_foo", "path": "old_path_1.json"}
+        ),
+        "old_path_2.json": json.dumps(
+            {"content": "old_foo", "path": "old_path_2.json"}
+        ),
+    }
+
+    storage.sink[destination] = existing_content
+
     extract_documentation(storage)
-    [(action, target)] = storage.actions
-    assert action == "MKDIR"
-    assert target == destination
+
+    assert len(storage.actions) == 3
+    [(action0, target0), (action1, target1), (action2, src, target2)] = storage.actions
+
+    expected_tmp_dir = destination + ".tmp"
+
+    assert action0 == "MKDIR"
+    assert target0 == expected_tmp_dir
+
+    assert action1 == "RMRF"
+    assert target1 == destination
+
+    assert action2 == "MV"
+    assert src == expected_tmp_dir
+    assert target2 == destination
+
+    assert storage.sink[destination] != existing_content
 
 
-def test_document_extraction_existing_content_cleared() -> None:
+def test_document_extraction_existing_preserved_on_error() -> None:
     destination = ".docs/programmer-ke/akash-docs-buddy"
     source = ".repo/programmer-ke/akash-docs-buddy"
     storage = FakeDocsStorage(source, destination)
-    storage.fake_destination_exists = True
-    storage.fake_destination_empty = False
-    extract_documentation(storage)
-    [(action, target)] = storage.actions
-    assert action == "RMRF"
-    assert target == destination
+
+    existing_content = {
+        "old_path_1.json": json.dumps(
+            {"content": "old_foo", "path": "old_path_1.json"}
+        ),
+        "old_path_2.json": json.dumps(
+            {"content": "old_foo", "path": "old_path_2.json"}
+        ),
+    }
+
+    storage.sink[destination] = existing_content
+
+    # create non json-serializable sources to trigger exception
+    for k in storage.sources:
+        storage.sources[k] = object()  # type: ignore
+
+    with pytest.raises(Exception):
+        extract_documentation(storage)
+
+    # existing content preserved
+    assert storage.sink[destination] == existing_content
+
+    # temporary destination should have been cleared
+    expected_tmp_dir = destination + ".tmp"
+    assert expected_tmp_dir not in storage.sink
 
 
 def test_document_extraction_existing_files_processed() -> None:
     destination = ".docs/programmer-ke/akash-docs-buddy"
     source = ".repo/programmer-ke/akash-docs-buddy"
     storage = FakeDocsStorage(source, destination)
-    storage.fake_destination_exists = True
-    storage.fake_destination_empty = True
     extract_documentation(storage)
 
     expected_read_paths = storage.sources.keys()
@@ -86,4 +127,4 @@ def test_document_extraction_existing_files_processed() -> None:
 
     expected_written_paths = [k.replace("/", "_") for k in storage.sources.keys()]
     for p in expected_written_paths:
-        assert p in storage.sink
+        assert p in storage.destination_sink
