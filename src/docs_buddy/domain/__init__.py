@@ -2,6 +2,7 @@
 
 Domain entities, events and commands reside here.
 """
+
 from dataclasses import dataclass, asdict
 import json
 

@@ -3,7 +3,11 @@ import pytest
 from pathlib import Path
 
 from docs_buddy.domain import RawDocument
-from docs_buddy.services import sync_repository, extract_documentation, RepositorySyncError
+from docs_buddy.services import (
+    sync_repository,
+    extract_documentation,
+    RepositorySyncError,
+)
 from docs_buddy.adapters import FakeRepoStorage, FakeDocsStorage
 
 

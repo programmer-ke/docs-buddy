@@ -131,10 +131,6 @@ Deploy applications and build on Akash Network:
 """
 
 
-
-
-
-
 class FakeDocsStorage:
     """In-memory test implementation of DocsStorage protocol"""
 
@@ -232,4 +228,3 @@ class FileSystemDocsStorage:
     def _write_file(path: Path, content: str, encoding: str = "utf-8"):
         with open(path, "wt", encoding=encoding) as f:
             f.write(content)
-        
