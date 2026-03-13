@@ -7,7 +7,7 @@ from docs_buddy.common import PathLike, DocsBuddyError
 from docs_buddy.domain import RawDocument
 
 
-class RepositoryRefreshError(DocsBuddyError):
+class RepositorySyncError(DocsBuddyError):
     pass
 
 
@@ -49,7 +49,7 @@ def sync_repository(url: str, storage: RepoStorage):
     elif storage.can_clone():
         storage.clone_repo(url)
     else:
-        raise RepositoryRefreshError("Unable to refresh repository")
+        raise RepositorySyncError("Unable to refresh repository")
 
 
 def extract_documentation(storage: DocsStorage):

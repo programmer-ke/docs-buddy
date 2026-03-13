@@ -4,7 +4,7 @@
 
 ### Main package
 
-The package is rooted a `src/docs_buddy`.
+The package is rooted at `src/docs_buddy`.
 
 The structure underneath the package is as follows:
 
@@ -14,7 +14,7 @@ Domain entities, events and commands reside here.
 
 #### services
 
-The use-case layer resides here. It includes usecase handlers.
+The use-case layer resides here. It includes use-case handlers.
 
 #### adapters
 
@@ -38,4 +38,4 @@ Tests that interact with infrastructure
 
 #### e2e
 
-End to end tests that test functionality at the endpoints
+End-to-end tests that test functionality at the endpoints

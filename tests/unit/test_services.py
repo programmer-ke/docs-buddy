@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 
 from docs_buddy.domain import RawDocument
-from docs_buddy.services import sync_repository, extract_documentation, RepositoryRefreshError
+from docs_buddy.services import sync_repository, extract_documentation, RepositorySyncError
 from docs_buddy.adapters import FakeRepoStorage, FakeDocsStorage
 
 
@@ -39,7 +39,7 @@ def test_syncing_non_existent_repo_and_cannot_clone() -> None:
     storage.fake_can_clone = False
     github_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
 
-    with pytest.raises(RepositoryRefreshError):
+    with pytest.raises(RepositorySyncError):
         sync_repository(github_url, storage)
 
     assert len(storage.actions) == 0

@@ -1,10 +1,10 @@
-from dataclasses import dataclass, asdict
-import json
-
 """Docs Buddy domain objects
 
 Domain entities, events and commands reside here.
 """
+from dataclasses import dataclass, asdict
+import json
+
 
 @dataclass(frozen=True)
 class RawDocument:
