@@ -7,7 +7,7 @@ git repository.
 
 ## Major functionality
 
-- Updating the documentation from the repository
+- Updating the documentation from Github.
 - Indexing the documentation
 - Answering queries from the documentation
 
