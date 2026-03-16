@@ -136,9 +136,9 @@ class FileSystemDocsStorage:
         self.source = Path(source)
 
     @contextmanager
-    def get_temp_location(self):
+    def get_temp_location(self, prefix=''):
         with tempfile.TemporaryDirectory(
-            prefix=f"{self.destination.name}_"
+            prefix=(prefix or f"{self.destination.name}_")
         ) as temp_dir:
             yield Path(temp_dir)
 

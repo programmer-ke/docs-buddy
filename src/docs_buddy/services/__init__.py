@@ -1,8 +1,7 @@
 """Docs Buddy Service Layer"""
 
-from typing import Protocol, Iterator
+from typing import Protocol, Iterator, ContextManager
 from pathlib import Path
-from typing import ContextManager
 
 from docs_buddy.common import PathLike, DocsBuddyError
 from docs_buddy.domain import RawDocument

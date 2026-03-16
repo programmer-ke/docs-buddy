@@ -105,7 +105,7 @@ def test_document_extraction_existing_preserved_on_error() -> None:
     for k in storage.sources:
         storage.sources[k] = object()  # type: ignore
 
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         extract_documentation(storage)
 
     # existing content preserved
