@@ -114,7 +114,7 @@ class FakeDocsStorage:
         return self.sources[key]
 
     def write_to_location(self, content: str, path: PathLike, base_dir: PathLike):
-        self.sink[base_dir][str(path)] = content
+        self.sink[str(base_dir)][str(path)] = content
 
     def replace_destination(self, temp_location: PathLike):
         self.sink[str(self.destination)] = self.sink.pop(temp_location)
