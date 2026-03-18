@@ -1,9 +1,11 @@
 """Docs buddy adapters reside here"""
 
+from contextlib import contextmanager
 from typing import Iterator
 from pathlib import Path
 import subprocess
 import shutil
+import tempfile
 from docs_buddy.common import PathLike
 
 
@@ -76,6 +78,115 @@ class FileSystemRepoStorage:
         subprocess.run(["git", "pull"], cwd=directory, check=True, capture_output=True)
 
 
+class FakeDocsStorage:
+    """In-memory test implementation of DocsStorage protocol"""
+
+    def __init__(self, source: PathLike, destination: PathLike):
+        self.destination = Path(destination)
+        self.actions: list = []
+        self.read_paths: set = set()
+        self.source = Path(source)
+
+        self.sources = {
+            "src/content/Docs/index.md": SAMPLE_DOC_2,
+            "src/content/Development_Page/welcome/index.mdx": SAMPLE_DOC_1,
+        }
+
+        self.sink: dict = {}
+
+    @contextmanager
+    def get_temp_location(self):
+        temp_location = str(self.destination) + ".tmp"
+        self.sink[temp_location] = {}
+        self.actions.append(("MKDIR", temp_location))
+        try:
+            yield temp_location
+        finally:
+            self.sink.pop(temp_location, None)
+
+    def get_source_paths(self) -> Iterator[PathLike]:
+        for k in self.sources.keys():
+            yield Path(k)
+
+    def read_from_source(self, nested_path: PathLike) -> str:
+        key = str(nested_path)
+        self.read_paths.add(key)
+        return self.sources[key]
+
+    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike):
+        self.sink[str(base_dir)][str(path)] = content
+
+    def replace_destination(self, temp_location: PathLike):
+        self.sink[str(self.destination)] = self.sink.pop(temp_location)
+        self.actions.append(("RMRF", str(self.destination)))
+        self.actions.append(("MV", str(temp_location), str(self.destination)))
+
+    @property
+    def destination_sink(self):
+        return self.sink[str(self.destination)]
+
+
+class FileSystemDocsStorage:
+    """FileSystem implementation of DocsStorage protocol"""
+
+    DOC_EXTENSIONS = ("mdx", "md")
+
+    def __init__(self, source: PathLike, destination: PathLike):
+        self.destination = Path(destination)
+        self.source = Path(source)
+
+    @contextmanager
+    def get_temp_location(self, prefix=''):
+        with tempfile.TemporaryDirectory(
+            prefix=(prefix or f"{self.destination.name}_")
+        ) as temp_dir:
+            yield Path(temp_dir)
+
+    def get_source_paths(self) -> Iterator[PathLike]:
+        source_directory_prefix = str(self.source) + "/"
+        documentation_paths = (
+            p
+            for ext in self.DOC_EXTENSIONS
+            for p in Path(self.source).rglob(f"*.{ext}")
+        )
+        for full_path in documentation_paths:
+            nested_path = str(full_path).removeprefix(source_directory_prefix)
+            yield nested_path
+
+    def read_from_source(self, nested_path: PathLike) -> str:
+        full_path = Path(self.source) / nested_path
+        return self._read_file(full_path)
+
+    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike):
+        full_path = Path(base_dir) / path
+        self._write_file(full_path, content)
+
+    def replace_destination(self, temp_location: PathLike):
+        """Replaces the destination with the provided temp_location"""
+
+        temp_path = Path(temp_location)
+        dest_path = self.destination
+
+        if dest_path.exists():
+            shutil.rmtree(dest_path)
+
+        shutil.move(str(temp_path), str(dest_path))
+
+    @staticmethod
+    def _is_empty_dir(path: Path) -> bool:
+        return path.is_dir() and not any(path.iterdir())
+
+    @staticmethod
+    def _read_file(path: Path, encoding: str = "utf-8") -> str:
+        with open(path, "rt", encoding=encoding) as f:
+            return f.read()
+
+    @staticmethod
+    def _write_file(path: Path, content: str, encoding: str = "utf-8"):
+        with open(path, "wt", encoding=encoding) as f:
+            f.write(content)
+
+
 SAMPLE_DOC_1 = """\
 ---
 title: Open Source Community
@@ -129,102 +240,3 @@ Deploy applications and build on Akash Network:
 - **[Deployment](/docs/developers/deployment)** - Console, CLI, SDKs, SDL, and AuthZ
 - **[Contributing](/docs/developers/contributing)** - Contribute to Akash codebase and documentation
 """
-
-
-class FakeDocsStorage:
-    """In-memory test implementation of DocsStorage protocol"""
-
-    def __init__(self, source: PathLike, destination: PathLike):
-        self.destination = destination
-        self.actions: list = []
-        self.read_paths: set = set()
-        self.fake_destination_exists: bool
-        self.fake_destination_empty: bool
-        self.source = source
-
-        self.sources = {
-            "src/content/Docs/index.md": SAMPLE_DOC_2,
-            "src/content/Development_Page/welcome/index.mdx": SAMPLE_DOC_1,
-        }
-
-        self.sink: dict = {}
-
-    def destination_exists(self):
-        return self.fake_destination_exists
-
-    def create_destination(self):
-        self.actions.append(("MKDIR", self.destination))
-
-    def destination_empty(self) -> bool:
-        return self.fake_destination_empty
-
-    def clear_destination(self):
-        self.actions.append(("RMRF", self.destination))
-
-    def get_source_paths(self) -> Iterator[PathLike]:
-        for k in self.sources.keys():
-            yield Path(k)
-
-    def read_from_source(self, nested_path: PathLike) -> str:
-        key = str(nested_path)
-        self.read_paths.add(key)
-        return self.sources[key]
-
-    def write_to_dest(self, content: str, path: PathLike):
-        self.sink[str(path)] = content
-
-
-class FileSystemDocsStorage:
-    """FileSystem implementation of DocsStorage protocol"""
-
-    DOC_EXTENSIONS = ("mdx", "md")
-
-    def __init__(self, source: PathLike, destination: PathLike):
-        self.destination = Path(destination)
-        self.source = Path(source)
-
-    def destination_exists(self):
-        return Path(self.destination).exists()
-
-    def create_destination(self):
-        self.destination.mkdir(parents=True)
-
-    def destination_empty(self) -> bool:
-        return self._is_empty_dir(Path(self.destination))
-
-    def clear_destination(self):
-        shutil.rmtree(self.destination)
-        self.destination.mkdir()
-
-    def get_source_paths(self) -> Iterator[PathLike]:
-        source_directory_prefix = str(self.source) + "/"
-        documentation_paths = (
-            p
-            for ext in self.DOC_EXTENSIONS
-            for p in Path(self.source).rglob(f"*.{ext}")
-        )
-        for full_path in documentation_paths:
-            nested_path = str(full_path).removeprefix(source_directory_prefix)
-            yield nested_path
-
-    def read_from_source(self, nested_path: PathLike) -> str:
-        full_path = Path(self.source) / nested_path
-        return self._read_file(full_path)
-
-    def write_to_dest(self, content: str, path: PathLike):
-        full_path = Path(self.destination) / path
-        self._write_file(full_path, content)
-
-    @staticmethod
-    def _is_empty_dir(path: Path) -> bool:
-        return path.is_dir() and not any(path.iterdir())
-
-    @staticmethod
-    def _read_file(path: Path, encoding: str = "utf-8") -> str:
-        with open(path, "rt", encoding=encoding) as f:
-            return f.read()
-
-    @staticmethod
-    def _write_file(path: Path, content: str, encoding: str = "utf-8"):
-        with open(path, "wt", encoding=encoding) as f:
-            f.write(content)

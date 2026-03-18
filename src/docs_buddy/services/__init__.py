@@ -1,6 +1,6 @@
 """Docs Buddy Service Layer"""
 
-from typing import Protocol, Iterator
+from typing import Protocol, Iterator, ContextManager
 from pathlib import Path
 
 from docs_buddy.common import PathLike, DocsBuddyError
@@ -26,19 +26,15 @@ class RepoStorage(Protocol):
 class DocsStorage(Protocol):
     """Interface for extracting raw documents from storage repository"""
 
-    def destination_exists(self) -> bool: ...
-
-    def create_destination(self): ...
-
-    def destination_empty(self) -> bool: ...
-
-    def clear_destination(self): ...
-
     def get_source_paths(self) -> Iterator[PathLike]: ...
 
     def read_from_source(self, path: PathLike) -> str: ...
 
-    def write_to_dest(self, content: str, path: PathLike): ...
+    def get_temp_location(self) -> ContextManager[PathLike]: ...
+
+    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike): ...
+
+    def replace_destination(self, temp_location: PathLike): ...
 
 
 def sync_repository(url: str, storage: RepoStorage):
@@ -55,17 +51,14 @@ def sync_repository(url: str, storage: RepoStorage):
 def extract_documentation(storage: DocsStorage):
     """Extracts documentation source files from local repository"""
 
-    if not storage.destination_exists():
-        storage.create_destination()
-
-    if not storage.destination_empty():
-        storage.clear_destination()
-
     source_paths = storage.get_source_paths()
 
-    for p in source_paths:
-        content = storage.read_from_source(p)
-        document_key = str(p)
-        raw_doc = RawDocument(content, document_key)
-        dest_path = document_key.replace("/", "_")
-        storage.write_to_dest(str(raw_doc), Path(dest_path))
+    with storage.get_temp_location() as tmp_location:
+        for p in source_paths:
+            content = storage.read_from_source(p)
+            document_key = str(p)
+            raw_doc = RawDocument(content, document_key)
+            dest_path = document_key.replace("/", "_")
+            storage.write_to_location(str(raw_doc), Path(dest_path), tmp_location)
+
+        storage.replace_destination(tmp_location)
