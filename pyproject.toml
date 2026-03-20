@@ -28,3 +28,6 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/docs_buddy"]
+
+[tool.mypy]
+disallow_incomplete_defs = true

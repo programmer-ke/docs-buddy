@@ -1,6 +1,10 @@
 from pathlib import Path
 from docs_buddy.adapters import FileSystemRepoStorage, FileSystemDocsStorage
-from docs_buddy.services import sync_repository, extract_documentation
+from docs_buddy.services import (
+    sync_repository,
+    update_document_artifacts,
+    process_raw_document,
+)
 
 
 if __name__ == "__main__":
@@ -12,4 +16,4 @@ if __name__ == "__main__":
     sync_repository(akash_website_url, repo_storage)
     documents_destination = Path(".docs") / repository_id
     docs_storage = FileSystemDocsStorage(repo_destination, documents_destination)
-    extract_documentation(docs_storage)
+    update_document_artifacts(docs_storage, processor=process_raw_document)

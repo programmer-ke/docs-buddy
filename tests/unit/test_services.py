@@ -5,7 +5,8 @@ from pathlib import Path
 from docs_buddy.domain import RawDocument
 from docs_buddy.services import (
     sync_repository,
-    extract_documentation,
+    update_document_artifacts,
+    process_raw_document,
     RepositorySyncError,
 )
 from docs_buddy.adapters import FakeRepoStorage, FakeDocsStorage
@@ -49,7 +50,7 @@ def test_syncing_non_existent_repo_and_cannot_clone() -> None:
     assert len(storage.actions) == 0
 
 
-def test_document_extraction_existing_content_replaced() -> None:
+def test_document_artifact_update_existing_content_replaced() -> None:
     destination = ".docs/programmer-ke/akash-docs-buddy"
     source = ".repo/programmer-ke/akash-docs-buddy"
     storage = FakeDocsStorage(source, destination)
@@ -65,7 +66,7 @@ def test_document_extraction_existing_content_replaced() -> None:
 
     storage.sink[destination] = existing_content
 
-    extract_documentation(storage)
+    update_document_artifacts(storage, process_raw_document)
 
     assert len(storage.actions) == 3
     [(action0, target0), (action1, target1), (action2, src, target2)] = storage.actions
@@ -85,7 +86,7 @@ def test_document_extraction_existing_content_replaced() -> None:
     assert storage.sink[destination] != existing_content
 
 
-def test_document_extraction_existing_preserved_on_error() -> None:
+def test_artifact_updates_existing_content_preserved_on_error() -> None:
     destination = ".docs/programmer-ke/akash-docs-buddy"
     source = ".repo/programmer-ke/akash-docs-buddy"
     storage = FakeDocsStorage(source, destination)
@@ -106,7 +107,7 @@ def test_document_extraction_existing_preserved_on_error() -> None:
         storage.sources[k] = object()  # type: ignore
 
     with pytest.raises(TypeError):
-        extract_documentation(storage)
+        update_document_artifacts(storage, process_raw_document)
 
     # existing content preserved
     assert storage.sink[destination] == existing_content
@@ -116,11 +117,11 @@ def test_document_extraction_existing_preserved_on_error() -> None:
     assert expected_tmp_dir not in storage.sink
 
 
-def test_document_extraction_existing_files_processed() -> None:
+def test_document_extraction_paths_renamed() -> None:
     destination = ".docs/programmer-ke/akash-docs-buddy"
     source = ".repo/programmer-ke/akash-docs-buddy"
     storage = FakeDocsStorage(source, destination)
-    extract_documentation(storage)
+    update_document_artifacts(storage, process_raw_document)
 
     expected_read_paths = storage.sources.keys()
     assert expected_read_paths == storage.read_paths

@@ -24,7 +24,7 @@ class FakeRepoStorage:
     def can_clone(self) -> bool:
         return self.fake_can_clone
 
-    def clone_repo(self, url: str):
+    def clone_repo(self, url: str) -> None:
         self.actions.append(("CLONE", url, self.target))
 
     def pull_repo(self):
@@ -43,7 +43,7 @@ class FileSystemRepoStorage:
     def pull_repo(self):
         self._update_repository(self.target)
 
-    def clone_repo(self, url: str):
+    def clone_repo(self, url: str) -> None:
         self._clone_repository(url, self.target)
 
     def can_clone(self):
@@ -66,7 +66,7 @@ class FileSystemRepoStorage:
         return git_dir.exists() and git_dir.is_dir()
 
     @staticmethod
-    def _clone_repository(url: str, target_dir: str):
+    def _clone_repository(url: str, target_dir: str) -> None:
         subprocess.run(
             ["git", "clone", "--depth", "1", url, target_dir],
             check=True,
@@ -74,7 +74,7 @@ class FileSystemRepoStorage:
         )
 
     @staticmethod
-    def _update_repository(directory: str):
+    def _update_repository(directory: str) -> None:
         subprocess.run(["git", "pull"], cwd=directory, check=True, capture_output=True)
 
 
@@ -113,10 +113,12 @@ class FakeDocsStorage:
         self.read_paths.add(key)
         return self.sources[key]
 
-    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike):
+    def write_to_location(
+        self, content: str, path: PathLike, base_dir: PathLike
+    ) -> None:
         self.sink[str(base_dir)][str(path)] = content
 
-    def replace_destination(self, temp_location: PathLike):
+    def replace_destination(self, temp_location: PathLike) -> None:
         self.sink[str(self.destination)] = self.sink.pop(temp_location)
         self.actions.append(("RMRF", str(self.destination)))
         self.actions.append(("MV", str(temp_location), str(self.destination)))
@@ -136,7 +138,7 @@ class FileSystemDocsStorage:
         self.source = Path(source)
 
     @contextmanager
-    def get_temp_location(self, prefix=''):
+    def get_temp_location(self, prefix=""):
         with tempfile.TemporaryDirectory(
             prefix=(prefix or f"{self.destination.name}_")
         ) as temp_dir:
@@ -157,11 +159,13 @@ class FileSystemDocsStorage:
         full_path = Path(self.source) / nested_path
         return self._read_file(full_path)
 
-    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike):
+    def write_to_location(
+        self, content: str, path: PathLike, base_dir: PathLike
+    ) -> None:
         full_path = Path(base_dir) / path
         self._write_file(full_path, content)
 
-    def replace_destination(self, temp_location: PathLike):
+    def replace_destination(self, temp_location: PathLike) -> None:
         """Replaces the destination with the provided temp_location"""
 
         temp_path = Path(temp_location)
@@ -182,7 +186,7 @@ class FileSystemDocsStorage:
             return f.read()
 
     @staticmethod
-    def _write_file(path: Path, content: str, encoding: str = "utf-8"):
+    def _write_file(path: Path, content: str, encoding: str = "utf-8") -> None:
         with open(path, "wt", encoding=encoding) as f:
             f.write(content)
 

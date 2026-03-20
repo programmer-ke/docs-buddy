@@ -1,6 +1,6 @@
 """Docs Buddy Service Layer"""
 
-from typing import Protocol, Iterator, ContextManager
+from typing import Protocol, Iterator, ContextManager, Callable
 from pathlib import Path
 
 from docs_buddy.common import PathLike, DocsBuddyError
@@ -12,18 +12,18 @@ class RepositorySyncError(DocsBuddyError):
 
 
 class RepoStorage(Protocol):
-    """Manages repository updates"""
+    """Protocol that manages repository updates"""
 
     def is_already_cloned(self) -> bool: ...
 
     def can_clone(self) -> bool: ...
 
-    def pull_repo(self): ...
+    def pull_repo(self) -> None: ...
 
-    def clone_repo(self, url: str): ...
+    def clone_repo(self, url: str) -> None: ...
 
 
-class DocsStorage(Protocol):
+class DocsArtifactStorage(Protocol):
     """Interface for extracting raw documents from storage repository"""
 
     def get_source_paths(self) -> Iterator[PathLike]: ...
@@ -32,12 +32,14 @@ class DocsStorage(Protocol):
 
     def get_temp_location(self) -> ContextManager[PathLike]: ...
 
-    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike): ...
+    def write_to_location(
+        self, content: str, path: PathLike, base_dir: PathLike
+    ) -> None: ...
 
-    def replace_destination(self, temp_location: PathLike): ...
+    def replace_destination(self, temp_location: PathLike) -> None: ...
 
 
-def sync_repository(url: str, storage: RepoStorage):
+def sync_repository(url: str, storage: RepoStorage) -> None:
     """Synchronizes a git repository to local storage"""
 
     if storage.is_already_cloned():
@@ -48,7 +50,9 @@ def sync_repository(url: str, storage: RepoStorage):
         raise RepositorySyncError("Unable to refresh repository")
 
 
-def extract_documentation(storage: DocsStorage):
+def update_document_artifacts(
+    storage: DocsArtifactStorage, processor: Callable
+) -> None:
     """Extracts documentation source files from local repository"""
 
     source_paths = storage.get_source_paths()
@@ -56,9 +60,14 @@ def extract_documentation(storage: DocsStorage):
     with storage.get_temp_location() as tmp_location:
         for p in source_paths:
             content = storage.read_from_source(p)
-            document_key = str(p)
-            raw_doc = RawDocument(content, document_key)
-            dest_path = document_key.replace("/", "_")
-            storage.write_to_location(str(raw_doc), Path(dest_path), tmp_location)
+            for artifact, dest_path in processor(content, p):
+                storage.write_to_location(str(artifact), Path(dest_path), tmp_location)
 
         storage.replace_destination(tmp_location)
+
+
+def process_raw_document(content, path):
+    document_key = str(path)
+    raw_doc = RawDocument(content, document_key)
+    dest_path = document_key.replace("/", "_")
+    yield raw_doc, dest_path
