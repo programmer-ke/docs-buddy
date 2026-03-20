@@ -15,6 +15,7 @@ git repository.
 
 - Sync the repository
 - Extract the raw markdown doc files
+- Extract the document metadata (front-matter)
 
 
 ## Design
