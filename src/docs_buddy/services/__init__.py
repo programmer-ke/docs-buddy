@@ -66,8 +66,13 @@ def update_document_artifacts(
         storage.replace_destination(tmp_location)
 
 
-def process_raw_document(content, path):
+def process_raw_document(
+    content: str, path: PathLike
+) -> Iterator[tuple[RawDocument, PathLike]]:
+    """Return a RawDocument and destination path from raw content and path"""
+
     document_key = str(path)
     raw_doc = RawDocument(content, document_key)
-    dest_path = document_key.replace("/", "_")
+    path_no_extension, _ = document_key.rsplit(".", 1)
+    dest_path = path_no_extension.replace("/", "_") + ".json"
     yield raw_doc, dest_path

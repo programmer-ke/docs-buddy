@@ -117,15 +117,13 @@ def test_artifact_updates_existing_content_preserved_on_error() -> None:
     assert expected_tmp_dir not in storage.sink
 
 
-def test_document_extraction_paths_renamed() -> None:
-    destination = ".docs/programmer-ke/akash-docs-buddy"
-    source = ".repo/programmer-ke/akash-docs-buddy"
-    storage = FakeDocsStorage(source, destination)
-    update_document_artifacts(storage, process_raw_document)
+def test_raw_document_processing() -> None:
 
-    expected_read_paths = storage.sources.keys()
-    assert expected_read_paths == storage.read_paths
+    source_key = "path/to/file.mdx"
+    content = "some file content"
 
-    expected_written_paths = [k.replace("/", "_") for k in storage.sources.keys()]
-    for p in expected_written_paths:
-        assert p in storage.destination_sink
+    [(raw_doc, dest_key)] = list(process_raw_document(content, source_key))
+
+    assert str(dest_key) == source_key.replace("/", "_").replace("mdx", "json")
+    assert raw_doc.content == content
+    assert raw_doc.path == source_key
