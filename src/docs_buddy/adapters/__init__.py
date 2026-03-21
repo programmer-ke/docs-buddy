@@ -6,6 +6,9 @@ from pathlib import Path
 import subprocess
 import shutil
 import tempfile
+
+import frontmatter
+
 from docs_buddy.common import PathLike
 
 
@@ -189,6 +192,12 @@ class FileSystemDocsStorage:
     def _write_file(path: Path, content: str, encoding: str = "utf-8") -> None:
         with open(path, "wt", encoding=encoding) as f:
             f.write(content)
+
+
+def frontmatter_metadata_extractor(text: str) -> tuple[dict, str]:
+    """Extract metadata using python-frontmatter"""
+
+    return frontmatter.parse(text)
 
 
 SAMPLE_DOC_1 = """\
