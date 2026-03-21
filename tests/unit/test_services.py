@@ -1,12 +1,14 @@
+import ast
 import json
 import pytest
 from pathlib import Path
 
-from docs_buddy.domain import RawDocument
+from docs_buddy import domain
 from docs_buddy.services import (
     sync_repository,
     update_document_artifacts,
     process_raw_document,
+    annotate_document,
     RepositorySyncError,
 )
 from docs_buddy.adapters import FakeRepoStorage, FakeDocsStorage
@@ -127,3 +129,26 @@ def test_raw_document_processing() -> None:
     assert str(dest_key) == source_key.replace("/", "_").replace("mdx", "json")
     assert raw_doc.content == content
     assert raw_doc.path == source_key
+
+
+def test_metadata_extraction() -> None:
+
+    source_key = "path/to/file.md"
+    source_path = "path_to_file.json"
+    content = "some content"
+    metadata = {"title": "foo", "author": "bar"}
+    source_text = f"{metadata}|{content}"
+    raw_document = domain.RawDocument(source_text, source_key)
+
+    def fake_extractor(content):
+        metadata, text = content.split("|")
+        return ast.literal_eval(metadata), text
+
+    [(annotated_doc, dest_key)] = list(
+        annotate_document(raw_document, source_path, metadata_extractor=fake_extractor)
+    )
+
+    assert str(dest_key) == str(source_path)
+    assert annotated_doc.content == content
+    assert annotated_doc.path == source_key
+    assert annotated_doc.metadata == metadata

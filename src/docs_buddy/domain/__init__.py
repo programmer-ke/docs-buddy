@@ -16,3 +16,15 @@ class RawDocument:
 
     def __str__(self):
         return json.dumps(asdict(self))
+
+
+@dataclass(frozen=True)
+class AnnotatedDocument:
+    """Representation of a document annotated with metadata"""
+
+    content: str
+    path: str
+    metadata: dict
+
+    def __str__(self):
+        return json.dumps(asdict(self))

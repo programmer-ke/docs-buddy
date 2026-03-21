@@ -4,7 +4,7 @@ from typing import Protocol, Iterator, ContextManager, Callable
 from pathlib import Path
 
 from docs_buddy.common import PathLike, DocsBuddyError
-from docs_buddy.domain import RawDocument
+from docs_buddy import domain
 
 
 class RepositorySyncError(DocsBuddyError):
@@ -68,11 +68,21 @@ def update_document_artifacts(
 
 def process_raw_document(
     content: str, path: PathLike
-) -> Iterator[tuple[RawDocument, PathLike]]:
-    """Return a RawDocument and destination path from raw content and path"""
+) -> Iterator[tuple[domain.RawDocument, PathLike]]:
+    """Return a representation of the raw document and destination path"""
 
     document_key = str(path)
-    raw_doc = RawDocument(content, document_key)
+    raw_doc = domain.RawDocument(content, document_key)
     path_no_extension, _ = document_key.rsplit(".", 1)
     dest_path = path_no_extension.replace("/", "_") + ".json"
     yield raw_doc, dest_path
+
+
+def annotate_document(
+    raw_doc: domain.RawDocument,
+    path: PathLike,
+    metadata_extractor: Callable[[str], tuple[dict, str]],
+) -> Iterator[tuple[domain.AnnotatedDocument, PathLike]]:
+    """Returns a document with metadata annotations and destination path"""
+    metadata, text = metadata_extractor(raw_doc.content)
+    yield domain.AnnotatedDocument(text, path=raw_doc.path, metadata=metadata), path

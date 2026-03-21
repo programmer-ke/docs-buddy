@@ -6,7 +6,6 @@ from docs_buddy.services import (
     process_raw_document,
 )
 
-
 if __name__ == "__main__":
     repository_id = "akash-network/website"
     akash_website_url = f"https://github.com/{repository_id}.git"
