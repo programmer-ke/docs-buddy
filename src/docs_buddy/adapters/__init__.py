@@ -12,6 +12,7 @@ import frontmatter
 from docs_buddy.common import PathLike
 
 
+# todo: add __raw__ to custom classes?
 class FakeRepoStorage:
     """Manages repository updates"""
 
@@ -134,11 +135,15 @@ class FakeDocsStorage:
 class FileSystemDocsStorage:
     """FileSystem implementation of DocsStorage protocol"""
 
-    DOC_EXTENSIONS = ("mdx", "md")
-
-    def __init__(self, source: PathLike, destination: PathLike):
+    def __init__(
+        self,
+        source: PathLike,
+        destination: PathLike,
+        doc_extensions: tuple[str, ...] = ("mdx", "md"),
+    ):
         self.destination = Path(destination)
         self.source = Path(source)
+        self.doc_extensions = doc_extensions
 
     @contextmanager
     def get_temp_location(self, prefix=""):
@@ -151,7 +156,7 @@ class FileSystemDocsStorage:
         source_directory_prefix = str(self.source) + "/"
         documentation_paths = (
             p
-            for ext in self.DOC_EXTENSIONS
+            for ext in self.doc_extensions
             for p in Path(self.source).rglob(f"*.{ext}")
         )
         for full_path in documentation_paths:

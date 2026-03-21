@@ -145,7 +145,9 @@ def test_metadata_extraction() -> None:
         return ast.literal_eval(metadata), text
 
     [(annotated_doc, dest_key)] = list(
-        annotate_document(raw_document, source_path, metadata_extractor=fake_extractor)
+        annotate_document(
+            str(raw_document), source_path, metadata_extractor=fake_extractor
+        )
     )
 
     assert str(dest_key) == str(source_path)

@@ -47,13 +47,18 @@ def sync_repository(url: str, storage: RepoStorage) -> None:
     elif storage.can_clone():
         storage.clone_repo(url)
     else:
-        raise RepositorySyncError("Unable to refresh repository")
+        raise RepositorySyncError("Unable to sync repository")
 
 
 def update_document_artifacts(
     storage: DocsArtifactStorage, processor: Callable
 ) -> None:
-    """Extracts documentation source files from local repository"""
+    """Updates documentation artifacts using the provided processor
+
+    Processes each file from source location into a temporary location.
+    When processing is completed successfully, the destination is
+    finally replaced with the newly processed artifacts
+    """
 
     source_paths = storage.get_source_paths()
 
@@ -68,7 +73,7 @@ def update_document_artifacts(
 
 def process_raw_document(
     content: str, path: PathLike
-) -> Iterator[tuple[domain.RawDocument, PathLike]]:
+) -> Iterator[tuple[domain.RawDocument, PathLike]]:  # todo: use iter here?
     """Return a representation of the raw document and destination path"""
 
     document_key = str(path)
@@ -79,11 +84,12 @@ def process_raw_document(
 
 
 def annotate_document(
-    raw_doc: domain.RawDocument,
+    raw_content: str,
     path: PathLike,
     metadata_extractor: Callable[[str], tuple[dict, str]],
 ) -> Iterator[tuple[domain.AnnotatedDocument, PathLike]]:
     """Returns a document with metadata annotations and destination path"""
+    raw_doc = domain.RawDocument.from_raw_text(raw_content)
     metadata, doc_content = metadata_extractor(raw_doc.content)
     yield domain.AnnotatedDocument(
         doc_content, path=raw_doc.path, metadata=metadata
