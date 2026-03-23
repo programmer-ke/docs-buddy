@@ -4,6 +4,7 @@ Domain entities, events and commands reside here.
 """
 
 from dataclasses import dataclass, asdict
+from typing import Any
 import json
 
 from docs_buddy import common
@@ -31,7 +32,7 @@ class AnnotatedDocument:
 
     content: str
     path: str
-    metadata: dict
+    metadata: dict[str, Any]
 
     def __str__(self):
         return json.dumps(asdict(self), default=common.json_datetime_handler)

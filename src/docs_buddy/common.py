@@ -3,7 +3,6 @@
 Should not have any local imports
 """
 
-import json
 import datetime
 import os
 
