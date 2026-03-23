@@ -73,7 +73,7 @@ def update_document_artifacts(
 
 def process_raw_document(
     content: str, path: PathLike
-) -> Iterator[tuple[domain.RawDocument, PathLike]]:  # todo: use iter here?
+) -> Iterator[tuple[domain.RawDocument, PathLike]]:
     """Return a representation of the raw document and destination path"""
 
     document_key = str(path)
