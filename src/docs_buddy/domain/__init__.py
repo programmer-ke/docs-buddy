@@ -1,10 +1,13 @@
 """Docs Buddy domain objects
 
-Domain entities, events and commands reside here.
+Includes:
+- Domain entities and services
+- Events
+- Commands
 """
 
 from dataclasses import dataclass, asdict
-from typing import Any
+from typing import Any, Sequence, Iterator
 import json
 
 from docs_buddy import common
@@ -36,3 +39,19 @@ class AnnotatedDocument:
 
     def __str__(self):
         return json.dumps(asdict(self), default=common.json_datetime_handler)
+
+
+def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[Sequence]:
+    """Returns chunks from the sequence"""
+
+    return (seq[i : i + size] for i in range(0, len(seq), step))
+
+
+def overlapping_chunks(
+    text: str, size: int = 2000, step: int = 1000
+) -> Iterator[Sequence[str]]:
+    if step >= size:
+        raise ValueError(
+            f"step ({step}) must be less than size ({size}) for overlapping chunks"
+        )
+    return sliding_window(text, size, step)
