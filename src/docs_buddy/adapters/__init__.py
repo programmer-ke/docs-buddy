@@ -192,14 +192,13 @@ class FileSystemDocsStorage:
         Yields:
             Relative paths to documents within source directory
         """
-        source_directory_prefix = str(self._source) + "/"
         documentation_paths = (
             p
             for ext in self._doc_extensions
             for p in Path(self._source).rglob(f"*.{ext}")
         )
         for full_path in documentation_paths:
-            nested_path = str(full_path).removeprefix(source_directory_prefix)
+            nested_path = full_path.relative_to(self._source)
             yield nested_path
 
     def read_from_source(self, nested_path: PathLike) -> str:
