@@ -1,10 +1,10 @@
 """Docs Buddy Service Layer"""
 
-from typing import Protocol, Iterator, ContextManager
+from typing import Protocol, Iterator, ContextManager, Callable
 from pathlib import Path
 
 from docs_buddy.common import PathLike, DocsBuddyError
-from docs_buddy.domain import RawDocument
+from docs_buddy import domain
 
 
 class RepositorySyncError(DocsBuddyError):
@@ -12,18 +12,18 @@ class RepositorySyncError(DocsBuddyError):
 
 
 class RepoStorage(Protocol):
-    """Manages repository updates"""
+    """Protocol that manages repository updates"""
 
     def is_already_cloned(self) -> bool: ...
 
     def can_clone(self) -> bool: ...
 
-    def pull_repo(self): ...
+    def pull_repo(self) -> None: ...
 
-    def clone_repo(self, url: str): ...
+    def clone_repo(self, url: str) -> None: ...
 
 
-class DocsStorage(Protocol):
+class DocsArtifactStorage(Protocol):
     """Interface for extracting raw documents from storage repository"""
 
     def get_source_paths(self) -> Iterator[PathLike]: ...
@@ -32,12 +32,14 @@ class DocsStorage(Protocol):
 
     def get_temp_location(self) -> ContextManager[PathLike]: ...
 
-    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike): ...
+    def write_to_location(
+        self, content: str, path: PathLike, base_dir: PathLike
+    ) -> None: ...
 
-    def replace_destination(self, temp_location: PathLike): ...
+    def replace_destination(self, temp_location: PathLike) -> None: ...
 
 
-def sync_repository(url: str, storage: RepoStorage):
+def sync_repository(url: str, storage: RepoStorage) -> None:
     """Synchronizes a git repository to local storage"""
 
     if storage.is_already_cloned():
@@ -45,20 +47,50 @@ def sync_repository(url: str, storage: RepoStorage):
     elif storage.can_clone():
         storage.clone_repo(url)
     else:
-        raise RepositorySyncError("Unable to refresh repository")
+        raise RepositorySyncError("Unable to sync repository")
 
 
-def extract_documentation(storage: DocsStorage):
-    """Extracts documentation source files from local repository"""
+def update_document_artifacts(
+    storage: DocsArtifactStorage, processor: Callable
+) -> None:
+    """Updates documentation artifacts using the provided processor
+
+    Processes each file from source location into a temporary location.
+    When processing is completed successfully, the destination is
+    finally replaced with the newly processed artifacts
+    """
 
     source_paths = storage.get_source_paths()
 
     with storage.get_temp_location() as tmp_location:
         for p in source_paths:
             content = storage.read_from_source(p)
-            document_key = str(p)
-            raw_doc = RawDocument(content, document_key)
-            dest_path = document_key.replace("/", "_")
-            storage.write_to_location(str(raw_doc), Path(dest_path), tmp_location)
+            for artifact, dest_path in processor(content, p):
+                storage.write_to_location(str(artifact), Path(dest_path), tmp_location)
 
         storage.replace_destination(tmp_location)
+
+
+def process_raw_document(
+    content: str, path: PathLike
+) -> Iterator[tuple[domain.RawDocument, PathLike]]:
+    """Return a representation of the raw document and destination path"""
+
+    document_key = str(path)
+    raw_doc = domain.RawDocument(content, document_key)
+    path_no_extension, _ = document_key.rsplit(".", 1)
+    dest_path = path_no_extension.replace("/", "_") + ".json"
+    yield raw_doc, dest_path
+
+
+def annotate_document(
+    raw_content: str,
+    path: PathLike,
+    metadata_extractor: Callable[[str], tuple[dict, str]],
+) -> Iterator[tuple[domain.AnnotatedDocument, PathLike]]:
+    """Returns a document with metadata annotations and destination path"""
+    raw_doc = domain.RawDocument.from_raw_text(raw_content)
+    metadata, doc_content = metadata_extractor(raw_doc.content)
+    yield domain.AnnotatedDocument(
+        doc_content, path=raw_doc.path, metadata=metadata
+    ), path

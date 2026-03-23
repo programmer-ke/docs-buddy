@@ -1,22 +1,17 @@
+import ast
 import json
 import pytest
 from pathlib import Path
 
-from docs_buddy.domain import RawDocument
-from docs_buddy.services import (
-    sync_repository,
-    extract_documentation,
-    RepositorySyncError,
-)
-from docs_buddy.adapters import FakeRepoStorage, FakeDocsStorage
+from docs_buddy import domain, services, adapters
 
 
 def test_syncing_existing_repository() -> None:
     location = ".repo/programmer-ke/akash-docs-buddy"
-    storage = FakeRepoStorage(location)
+    storage = adapters.FakeRepoStorage(location)
     storage.fake_is_cloned = True
     github_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
-    sync_repository(github_url, storage)
+    services.sync_repository(github_url, storage)
     assert len(storage.actions) == 1
     [(action,)] = storage.actions
     assert action == "PULL"
@@ -24,11 +19,11 @@ def test_syncing_existing_repository() -> None:
 
 def test_syncing_non_existent_repo_and_can_clone() -> None:
     location = ".repo/programmer-ke/akash-docs-buddy"
-    storage = FakeRepoStorage(location)
+    storage = adapters.FakeRepoStorage(location)
     storage.fake_is_cloned = False
     storage.fake_can_clone = True
     github_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
-    sync_repository(github_url, storage)
+    services.sync_repository(github_url, storage)
     assert len(storage.actions) == 1
     [(action, url, target)] = storage.actions
     assert action == "CLONE"
@@ -38,21 +33,21 @@ def test_syncing_non_existent_repo_and_can_clone() -> None:
 
 def test_syncing_non_existent_repo_and_cannot_clone() -> None:
     location = ".repo/programmer-ke/akash-docs-buddy"
-    storage = FakeRepoStorage(location)
+    storage = adapters.FakeRepoStorage(location)
     storage.fake_is_cloned = False
     storage.fake_can_clone = False
     github_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
 
-    with pytest.raises(RepositorySyncError):
-        sync_repository(github_url, storage)
+    with pytest.raises(services.RepositorySyncError):
+        services.sync_repository(github_url, storage)
 
     assert len(storage.actions) == 0
 
 
-def test_document_extraction_existing_content_replaced() -> None:
+def test_document_artifact_update_existing_content_replaced() -> None:
     destination = ".docs/programmer-ke/akash-docs-buddy"
     source = ".repo/programmer-ke/akash-docs-buddy"
-    storage = FakeDocsStorage(source, destination)
+    storage = adapters.FakeDocsStorage(source, destination)
 
     existing_content = {
         "old_path_1.json": json.dumps(
@@ -65,7 +60,7 @@ def test_document_extraction_existing_content_replaced() -> None:
 
     storage.sink[destination] = existing_content
 
-    extract_documentation(storage)
+    services.update_document_artifacts(storage, services.process_raw_document)
 
     assert len(storage.actions) == 3
     [(action0, target0), (action1, target1), (action2, src, target2)] = storage.actions
@@ -85,10 +80,10 @@ def test_document_extraction_existing_content_replaced() -> None:
     assert storage.sink[destination] != existing_content
 
 
-def test_document_extraction_existing_preserved_on_error() -> None:
+def test_artifact_updates_existing_content_preserved_on_error() -> None:
     destination = ".docs/programmer-ke/akash-docs-buddy"
     source = ".repo/programmer-ke/akash-docs-buddy"
-    storage = FakeDocsStorage(source, destination)
+    storage = adapters.FakeDocsStorage(source, destination)
 
     existing_content = {
         "old_path_1.json": json.dumps(
@@ -106,7 +101,7 @@ def test_document_extraction_existing_preserved_on_error() -> None:
         storage.sources[k] = object()  # type: ignore
 
     with pytest.raises(TypeError):
-        extract_documentation(storage)
+        services.update_document_artifacts(storage, services.process_raw_document)
 
     # existing content preserved
     assert storage.sink[destination] == existing_content
@@ -116,15 +111,38 @@ def test_document_extraction_existing_preserved_on_error() -> None:
     assert expected_tmp_dir not in storage.sink
 
 
-def test_document_extraction_existing_files_processed() -> None:
-    destination = ".docs/programmer-ke/akash-docs-buddy"
-    source = ".repo/programmer-ke/akash-docs-buddy"
-    storage = FakeDocsStorage(source, destination)
-    extract_documentation(storage)
+def test_raw_document_processing() -> None:
 
-    expected_read_paths = storage.sources.keys()
-    assert expected_read_paths == storage.read_paths
+    source_key = "path/to/file.mdx"
+    content = "some file content"
 
-    expected_written_paths = [k.replace("/", "_") for k in storage.sources.keys()]
-    for p in expected_written_paths:
-        assert p in storage.destination_sink
+    [(raw_doc, dest_key)] = list(services.process_raw_document(content, source_key))
+
+    assert str(dest_key) == source_key.replace("/", "_").replace("mdx", "json")
+    assert raw_doc.content == content
+    assert raw_doc.path == source_key
+
+
+def test_metadata_extraction() -> None:
+
+    source_key = "path/to/file.md"
+    source_path = "path_to_file.json"
+    content = "some content"
+    metadata = {"title": "foo", "author": "bar"}
+    source_text = f"{metadata}|{content}"
+    raw_document = domain.RawDocument(source_text, source_key)
+
+    def fake_extractor(content):
+        metadata, text = content.split("|")
+        return ast.literal_eval(metadata), text
+
+    [(annotated_doc, dest_key)] = list(
+        services.annotate_document(
+            str(raw_document), source_path, metadata_extractor=fake_extractor
+        )
+    )
+
+    assert str(dest_key) == str(source_path)
+    assert annotated_doc.content == content
+    assert annotated_doc.path == source_key
+    assert annotated_doc.metadata == metadata

@@ -6,17 +6,24 @@ from pathlib import Path
 import subprocess
 import shutil
 import tempfile
+
+import frontmatter
+
 from docs_buddy.common import PathLike
 
 
 class FakeRepoStorage:
-    """Manages repository updates"""
+    """In-memory test implementation of RepoStorage protocol."""
 
     def __init__(self, target: PathLike):
-        self.target = target
+        self._target = target
         self.fake_is_cloned: bool
         self.fake_can_clone: bool
         self.actions: list = []
+
+    def __repr__(self):
+        classname = type(self).__name__
+        return f"{classname}({self._target!r})"
 
     def is_already_cloned(self) -> bool:
         return self.fake_is_cloned
@@ -24,27 +31,31 @@ class FakeRepoStorage:
     def can_clone(self) -> bool:
         return self.fake_can_clone
 
-    def clone_repo(self, url: str):
-        self.actions.append(("CLONE", url, self.target))
+    def clone_repo(self, url: str) -> None:
+        self.actions.append(("CLONE", url, self._target))
 
     def pull_repo(self):
         self.actions.append(("PULL",))
 
 
 class FileSystemRepoStorage:
-    """Manages repository updates"""
+    """File system implementation of RepoStorage protocol."""
 
     def __init__(self, target):
-        self.target = target
+        self._target = target
+
+    def __repr__(self):
+        classname = type(self).__name__
+        return f"{classname}({self._target!r})"
 
     def is_already_cloned(self) -> bool:
-        return self._is_git_repository(self.target)
+        return self._is_git_repository(self._target)
 
     def pull_repo(self):
-        self._update_repository(self.target)
+        self._update_repository(self._target)
 
-    def clone_repo(self, url: str):
-        self._clone_repository(url, self.target)
+    def clone_repo(self, url: str) -> None:
+        self._clone_repository(url, self._target)
 
     def can_clone(self):
         """Indicates whether we can clone a new repo in the target
@@ -53,20 +64,23 @@ class FileSystemRepoStorage:
         - The target location doesn't exist (git will create it)
         - The target location is an empty directory
         """
-        path = Path(self.target)
+        path = Path(self._target)
         return not path.exists() or self._is_empty_dir(path)
 
     @staticmethod
     def _is_empty_dir(path: Path) -> bool:
+        """Check if a directory exists and is empty."""
         return path.is_dir() and not any(path.iterdir())
 
     @staticmethod
     def _is_git_repository(directory: str) -> bool:
+        """Check if a directory contains a .git subdirectory."""
         git_dir = Path(directory) / ".git"
         return git_dir.exists() and git_dir.is_dir()
 
     @staticmethod
-    def _clone_repository(url: str, target_dir: str):
+    def _clone_repository(url: str, target_dir: str) -> None:
+        """Clone a git repository with depth 1."""
         subprocess.run(
             ["git", "clone", "--depth", "1", url, target_dir],
             check=True,
@@ -74,18 +88,19 @@ class FileSystemRepoStorage:
         )
 
     @staticmethod
-    def _update_repository(directory: str):
+    def _update_repository(directory: str) -> None:
+        """Pull latest changes from a git repository."""
         subprocess.run(["git", "pull"], cwd=directory, check=True, capture_output=True)
 
 
 class FakeDocsStorage:
-    """In-memory test implementation of DocsStorage protocol"""
+    """In-memory test implementation of DocsArtifactStorage protocol."""
 
     def __init__(self, source: PathLike, destination: PathLike):
-        self.destination = Path(destination)
+        self._source = Path(source)
+        self._destination = Path(destination)
         self.actions: list = []
         self.read_paths: set = set()
-        self.source = Path(source)
 
         self.sources = {
             "src/content/Docs/index.md": SAMPLE_DOC_2,
@@ -94,9 +109,17 @@ class FakeDocsStorage:
 
         self.sink: dict = {}
 
+    def __repr__(self):
+        classname = type(self).__name__
+        return f"{classname}({self._source!r}, {self._destination!r})"
+
+    @property
+    def destination_sink(self):
+        return self.sink[str(self._destination)]
+
     @contextmanager
     def get_temp_location(self):
-        temp_location = str(self.destination) + ".tmp"
+        temp_location = str(self._destination) + ".tmp"
         self.sink[temp_location] = {}
         self.actions.append(("MKDIR", temp_location))
         try:
@@ -113,59 +136,103 @@ class FakeDocsStorage:
         self.read_paths.add(key)
         return self.sources[key]
 
-    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike):
+    def write_to_location(
+        self, content: str, path: PathLike, base_dir: PathLike
+    ) -> None:
         self.sink[str(base_dir)][str(path)] = content
 
-    def replace_destination(self, temp_location: PathLike):
-        self.sink[str(self.destination)] = self.sink.pop(temp_location)
-        self.actions.append(("RMRF", str(self.destination)))
-        self.actions.append(("MV", str(temp_location), str(self.destination)))
-
-    @property
-    def destination_sink(self):
-        return self.sink[str(self.destination)]
+    def replace_destination(self, temp_location: PathLike) -> None:
+        self.sink[str(self._destination)] = self.sink.pop(temp_location)
+        self.actions.append(("RMRF", str(self._destination)))
+        self.actions.append(("MV", str(temp_location), str(self._destination)))
 
 
 class FileSystemDocsStorage:
-    """FileSystem implementation of DocsStorage protocol"""
+    """File system implementation of DocsArtifactStorage protocol."""
 
-    DOC_EXTENSIONS = ("mdx", "md")
+    def __init__(
+        self,
+        source: PathLike,
+        destination: PathLike,
+        doc_extensions: tuple[str, ...] = ("mdx", "md"),
+    ):
+        """
+        Initialize storage with source and destination paths.
 
-    def __init__(self, source: PathLike, destination: PathLike):
-        self.destination = Path(destination)
-        self.source = Path(source)
+        Args:
+            source: Directory containing source documents
+            destination: Directory where processed documents will be written
+            doc_extensions: File extensions to consider as documents
+        """
+        self._destination = Path(destination)
+        self._source = Path(source)
+        self._doc_extensions = doc_extensions
+
+    def __repr__(self):
+        classname = type(self).__name__
+        return f"{classname}({self._source!r}, {self._destination!r})"
 
     @contextmanager
-    def get_temp_location(self, prefix=''):
+    def get_temp_location(self, prefix=""):
+        """
+        Create a temporary directory for atomic writes.
+
+        Yields:
+            Path to temporary directory
+        """
         with tempfile.TemporaryDirectory(
-            prefix=(prefix or f"{self.destination.name}_")
+            prefix=(prefix or f"{self._destination.name}_")
         ) as temp_dir:
             yield Path(temp_dir)
 
     def get_source_paths(self) -> Iterator[PathLike]:
-        source_directory_prefix = str(self.source) + "/"
+        """
+        Get all document paths from the source directory.
+
+        Yields:
+            Relative paths to documents within source directory
+        """
         documentation_paths = (
             p
-            for ext in self.DOC_EXTENSIONS
-            for p in Path(self.source).rglob(f"*.{ext}")
+            for ext in self._doc_extensions
+            for p in Path(self._source).rglob(f"*.{ext}")
         )
         for full_path in documentation_paths:
-            nested_path = str(full_path).removeprefix(source_directory_prefix)
+            nested_path = full_path.relative_to(self._source)
             yield nested_path
 
     def read_from_source(self, nested_path: PathLike) -> str:
-        full_path = Path(self.source) / nested_path
+        """
+        Read content from a source document.
+
+        Args:
+            nested_path: Relative path within source directory
+
+        Returns:
+            Document content as string
+        """
+        full_path = Path(self._source) / nested_path
         return self._read_file(full_path)
 
-    def write_to_location(self, content: str, path: PathLike, base_dir: PathLike):
+    def write_to_location(
+        self, content: str, path: PathLike, base_dir: PathLike
+    ) -> None:
+        """
+        Write content to a location within a base directory.
+
+        Args:
+            content: Document content to write
+            path: Relative path within base directory
+            base_dir: Base directory for writing
+        """
         full_path = Path(base_dir) / path
         self._write_file(full_path, content)
 
-    def replace_destination(self, temp_location: PathLike):
+    def replace_destination(self, temp_location: PathLike) -> None:
         """Replaces the destination with the provided temp_location"""
 
         temp_path = Path(temp_location)
-        dest_path = self.destination
+        dest_path = self._destination
 
         if dest_path.exists():
             shutil.rmtree(dest_path)
@@ -174,17 +241,33 @@ class FileSystemDocsStorage:
 
     @staticmethod
     def _is_empty_dir(path: Path) -> bool:
+        """Check if a directory exists and is empty."""
         return path.is_dir() and not any(path.iterdir())
 
     @staticmethod
     def _read_file(path: Path, encoding: str = "utf-8") -> str:
+        """Read file content with specified encoding."""
         with open(path, "rt", encoding=encoding) as f:
             return f.read()
 
     @staticmethod
-    def _write_file(path: Path, content: str, encoding: str = "utf-8"):
+    def _write_file(path: Path, content: str, encoding: str = "utf-8") -> None:
+        """Write content to file with specified encoding."""
         with open(path, "wt", encoding=encoding) as f:
             f.write(content)
+
+
+def frontmatter_metadata_extractor(text: str) -> tuple[dict, str]:
+    """
+    Extract metadata from document text using frontmatter.
+
+    Args:
+        text: Document text potentially containing frontmatter
+
+    Returns:
+        Tuple of (metadata dictionary, content without frontmatter)
+    """
+    return frontmatter.parse(text)
 
 
 SAMPLE_DOC_1 = """\

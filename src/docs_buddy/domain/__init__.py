@@ -4,7 +4,10 @@ Domain entities, events and commands reside here.
 """
 
 from dataclasses import dataclass, asdict
+from typing import Any
 import json
+
+from docs_buddy import common
 
 
 @dataclass(frozen=True)
@@ -14,5 +17,22 @@ class RawDocument:
     content: str
     path: str
 
+    @classmethod
+    def from_raw_text(cls, text: str) -> "RawDocument":
+        dict_ = json.loads(text)
+        return cls(**dict_)
+
     def __str__(self):
         return json.dumps(asdict(self))
+
+
+@dataclass(frozen=True)
+class AnnotatedDocument:
+    """Representation of a document annotated with metadata"""
+
+    content: str
+    path: str
+    metadata: dict[str, Any]
+
+    def __str__(self):
+        return json.dumps(asdict(self), default=common.json_datetime_handler)
