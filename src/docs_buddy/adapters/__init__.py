@@ -13,7 +13,7 @@ from docs_buddy.common import PathLike
 
 
 class FakeRepoStorage:
-    """Manages repository updates"""
+    """In-memory test implementation of RepoStorage protocol."""
 
     def __init__(self, target: PathLike):
         self._target = target
@@ -23,7 +23,7 @@ class FakeRepoStorage:
 
     def __repr__(self):
         classname = type(self).__name__
-        return f'{classname}({self._target!r})'
+        return f"{classname}({self._target!r})"
 
     def is_already_cloned(self) -> bool:
         return self.fake_is_cloned
@@ -39,14 +39,14 @@ class FakeRepoStorage:
 
 
 class FileSystemRepoStorage:
-    """Manages repository updates"""
+    """File system implementation of RepoStorage protocol."""
 
     def __init__(self, target):
         self._target = target
 
     def __repr__(self):
         classname = type(self).__name__
-        return f'{classname}({self._target!r})'
+        return f"{classname}({self._target!r})"
 
     def is_already_cloned(self) -> bool:
         return self._is_git_repository(self._target)
@@ -69,15 +69,18 @@ class FileSystemRepoStorage:
 
     @staticmethod
     def _is_empty_dir(path: Path) -> bool:
+        """Check if a directory exists and is empty."""
         return path.is_dir() and not any(path.iterdir())
 
     @staticmethod
     def _is_git_repository(directory: str) -> bool:
+        """Check if a directory contains a .git subdirectory."""
         git_dir = Path(directory) / ".git"
         return git_dir.exists() and git_dir.is_dir()
 
     @staticmethod
     def _clone_repository(url: str, target_dir: str) -> None:
+        """Clone a git repository with depth 1."""
         subprocess.run(
             ["git", "clone", "--depth", "1", url, target_dir],
             check=True,
@@ -86,11 +89,12 @@ class FileSystemRepoStorage:
 
     @staticmethod
     def _update_repository(directory: str) -> None:
+        """Pull latest changes from a git repository."""
         subprocess.run(["git", "pull"], cwd=directory, check=True, capture_output=True)
 
 
 class FakeDocsStorage:
-    """In-memory test implementation of DocsStorage protocol"""
+    """In-memory test implementation of DocsArtifactStorage protocol."""
 
     def __init__(self, source: PathLike, destination: PathLike):
         self._source = Path(source)
@@ -107,7 +111,7 @@ class FakeDocsStorage:
 
     def __repr__(self):
         classname = type(self).__name__
-        return f'{classname}({self._source!r}, {self._destination!r})'
+        return f"{classname}({self._source!r}, {self._destination!r})"
 
     @property
     def destination_sink(self):
@@ -144,7 +148,7 @@ class FakeDocsStorage:
 
 
 class FileSystemDocsStorage:
-    """FileSystem implementation of DocsStorage protocol"""
+    """File system implementation of DocsArtifactStorage protocol."""
 
     def __init__(
         self,
@@ -152,22 +156,42 @@ class FileSystemDocsStorage:
         destination: PathLike,
         doc_extensions: tuple[str, ...] = ("mdx", "md"),
     ):
+        """
+        Initialize storage with source and destination paths.
+
+        Args:
+            source: Directory containing source documents
+            destination: Directory where processed documents will be written
+            doc_extensions: File extensions to consider as documents
+        """
         self._destination = Path(destination)
         self._source = Path(source)
         self._doc_extensions = doc_extensions
 
     def __repr__(self):
         classname = type(self).__name__
-        return f'{classname}({self._source!r}, {self._destination!r})'
+        return f"{classname}({self._source!r}, {self._destination!r})"
 
     @contextmanager
     def get_temp_location(self, prefix=""):
+        """
+        Create a temporary directory for atomic writes.
+
+        Yields:
+            Path to temporary directory
+        """
         with tempfile.TemporaryDirectory(
             prefix=(prefix or f"{self._destination.name}_")
         ) as temp_dir:
             yield Path(temp_dir)
 
     def get_source_paths(self) -> Iterator[PathLike]:
+        """
+        Get all document paths from the source directory.
+
+        Yields:
+            Relative paths to documents within source directory
+        """
         source_directory_prefix = str(self._source) + "/"
         documentation_paths = (
             p
@@ -179,12 +203,29 @@ class FileSystemDocsStorage:
             yield nested_path
 
     def read_from_source(self, nested_path: PathLike) -> str:
+        """
+        Read content from a source document.
+
+        Args:
+            nested_path: Relative path within source directory
+
+        Returns:
+            Document content as string
+        """
         full_path = Path(self._source) / nested_path
         return self._read_file(full_path)
 
     def write_to_location(
         self, content: str, path: PathLike, base_dir: PathLike
     ) -> None:
+        """
+        Write content to a location within a base directory.
+
+        Args:
+            content: Document content to write
+            path: Relative path within base directory
+            base_dir: Base directory for writing
+        """
         full_path = Path(base_dir) / path
         self._write_file(full_path, content)
 
@@ -201,22 +242,32 @@ class FileSystemDocsStorage:
 
     @staticmethod
     def _is_empty_dir(path: Path) -> bool:
+        """Check if a directory exists and is empty."""
         return path.is_dir() and not any(path.iterdir())
 
     @staticmethod
     def _read_file(path: Path, encoding: str = "utf-8") -> str:
+        """Read file content with specified encoding."""
         with open(path, "rt", encoding=encoding) as f:
             return f.read()
 
     @staticmethod
     def _write_file(path: Path, content: str, encoding: str = "utf-8") -> None:
+        """Write content to file with specified encoding."""
         with open(path, "wt", encoding=encoding) as f:
             f.write(content)
 
 
 def frontmatter_metadata_extractor(text: str) -> tuple[dict, str]:
-    """Extract metadata using python-frontmatter"""
+    """
+    Extract metadata from document text using frontmatter.
 
+    Args:
+        text: Document text potentially containing frontmatter
+
+    Returns:
+        Tuple of (metadata dictionary, content without frontmatter)
+    """
     return frontmatter.parse(text)
 
 

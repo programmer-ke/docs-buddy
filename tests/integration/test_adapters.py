@@ -16,7 +16,9 @@ This is the starting point for joining and contributing to building Akash Networ
 def test_frontmatter_extractor() -> None:
     metadata, content = adapters.frontmatter_metadata_extractor(SAMPLE_DOC_1)
 
-    assert all([t in metadata for t in ['title', 'description', 'centeredHeader', 'pubDate']])
+    assert all(
+        [t in metadata for t in ["title", "description", "centeredHeader", "pubDate"]]
+    )
     assert metadata["title"] == "Open Source Community"
-    assert metadata['pubDate'] == '2020-01-19'
+    assert metadata["pubDate"] == "2020-01-19"
     assert SAMPLE_DOC_1.strip().endswith(content)
