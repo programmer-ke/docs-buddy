@@ -94,3 +94,15 @@ def annotate_document(
     yield domain.AnnotatedDocument(
         doc_content, path=raw_doc.path, metadata=metadata
     ), path
+
+
+def chunk_document(
+    raw_content: str,
+    path: PathLike,
+) -> Iterator[tuple[domain.DocumentChunk, PathLike]]:
+    """Returns a document with metadata annotations and destination path"""
+    annotated_doc = domain.AnnotatedDocument.fromstring(raw_content)
+    for chunk_data in domain.overlapping_chunks(annotated_doc.content):
+        yield domain.DocumentChunk(
+            path=annotated_doc.path, metadata=annotated_doc.metadata, **chunk_data
+        ), path

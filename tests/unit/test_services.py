@@ -146,3 +146,30 @@ def test_metadata_extraction() -> None:
     assert annotated_doc.content == content
     assert annotated_doc.path == source_key
     assert annotated_doc.metadata == metadata
+
+
+def test_document_chunking() -> None:
+    """Test that documents are properly chunked with metadata preserved."""
+
+    # Create an annotated document as a string
+    source_path = "docs/intro.md"
+    metadata = {"title": "Introduction", "author": "Alice"}
+    content = "This is a sample document. " * 100  # Make it long enough to chunk
+
+    # Create an AnnotatedDocument and convert to string
+    annotated_doc = domain.AnnotatedDocument(
+        content=content, path=source_path, metadata=metadata
+    )
+    raw_content = str(annotated_doc)
+
+    # Test chunking
+    results = list(services.chunk_document(raw_content, source_path))
+
+    # Verify we got chunks
+    assert len(results) > 1
+
+    for chunk, dest_path in results:
+        assert dest_path == source_path
+        assert isinstance(chunk, domain.DocumentChunk)
+        assert chunk.metadata == metadata
+        assert chunk.path == source_path

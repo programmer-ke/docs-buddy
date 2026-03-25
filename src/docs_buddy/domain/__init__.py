@@ -64,9 +64,7 @@ def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:
     return ({"chunk": seq[i : i + size], "index": i} for i in range(0, len(seq), step))
 
 
-def overlapping_chunks(
-    text: str, size: int = 2000, step: int = 1000
-) -> Iterator[dict]:
+def overlapping_chunks(text: str, size: int = 2000, step: int = 1000) -> Iterator[dict]:
     """Returns overlapping chunks of text from the provided text"""
     if step >= size:
         raise ValueError(
