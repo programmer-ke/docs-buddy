@@ -1,5 +1,6 @@
 import ast
 import json
+import re
 import pytest
 from pathlib import Path
 
@@ -152,7 +153,7 @@ def test_document_chunking() -> None:
     """Test that documents are properly chunked with metadata preserved."""
 
     # Create an annotated document as a string
-    source_path = "docs/intro.md"
+    source_path = "docs/intro.json"
     metadata = {"title": "Introduction", "author": "Alice"}
     content = "This is a sample document. " * 100  # Make it long enough to chunk
 
@@ -169,7 +170,11 @@ def test_document_chunking() -> None:
     assert len(results) > 1
 
     for chunk, dest_path in results:
-        assert dest_path == source_path
         assert isinstance(chunk, domain.DocumentChunk)
         assert chunk.metadata == metadata
         assert chunk.path == source_path
+
+        # check that chuck index is appended to path
+        prefix, extension = source_path.rsplit(".", 1)
+        assert str(dest_path).startswith(prefix)
+        assert re.match(f"{prefix}_{chunk.index}\\.json", str(dest_path))

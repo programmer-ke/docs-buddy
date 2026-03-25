@@ -103,6 +103,11 @@ def chunk_document(
     """Returns a document with metadata annotations and destination path"""
     annotated_doc = domain.AnnotatedDocument.fromstring(raw_content)
     for chunk_data in domain.overlapping_chunks(annotated_doc.content):
-        yield domain.DocumentChunk(
+        dest_prefix, extension = str(path).rsplit(".", 1)
+
+        chunk = domain.DocumentChunk(
             path=annotated_doc.path, metadata=annotated_doc.metadata, **chunk_data
-        ), path
+        )
+
+        dest_path = f"{dest_prefix}_{chunk.index}.{extension}"
+        yield chunk, dest_path
