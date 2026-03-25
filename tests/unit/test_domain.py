@@ -59,14 +59,24 @@ def test_annotated_document_datetime_serialization() -> None:
 def test_overlapping_chunks_basic() -> None:
     text = "abcdefghij"
     result = list(domain.overlapping_chunks(text, size=4, step=2))
-    assert result == ["abcd", "cdef", "efgh", "ghij", "ij"]
+    assert result == [
+        {"index": 0, "chunk": "abcd"},
+        {"index": 2, "chunk": "cdef"},
+        {"index": 4, "chunk": "efgh"},
+        {"index": 6, "chunk": "ghij"},
+        {"index": 8, "chunk": "ij"},
+    ]
 
 
 def test_overlapping_chunks_exact_fit() -> None:
     """Test when text length fits chunk size exactly."""
     text = "123456"
     result = list(domain.overlapping_chunks(text, size=3, step=2))
-    assert result == ["123", "345", "56"]
+    assert result == [
+        {"index": 0, "chunk": "123"},
+        {"index": 2, "chunk": "345"},
+        {"index": 4, "chunk": "56"},
+    ]
 
 
 def test_overlapping_chunks_default_params() -> None:
@@ -75,9 +85,9 @@ def test_overlapping_chunks_default_params() -> None:
     result = list(domain.overlapping_chunks(text))
     # Should create chunks of 2000 chars with 1000 overlap
     assert len(result) > 1
-    assert all(len(chunk) == 2000 for chunk in result[:-1])
+    assert all(len(item["chunk"]) == 2000 for item in result[:-1])
     # Last chunk may be shorter
-    assert len(result[-1]) <= 2000
+    assert len(result[-1]["chunk"]) <= 2000
 
 
 def test_overlapping_chunks_no_overlap_raises() -> None:
@@ -102,7 +112,7 @@ def test_overlapping_chunks_smaller_than_size() -> None:
     """Test when text is smaller than chunk size."""
     text = "abc"
     result = list(domain.overlapping_chunks(text, size=5, step=2))
-    assert result == ["abc", "c"]
+    assert result == [{"index": 0, "chunk": "abc"}, {"index": 2, "chunk": "c"}]
 
 
 def test_overlapping_chunks_overlap_amount() -> None:
@@ -110,11 +120,16 @@ def test_overlapping_chunks_overlap_amount() -> None:
     text = "0123456789"
     result = list(domain.overlapping_chunks(text, size=5, step=3))
     # Overlap = size - step = 5 - 3 = 2 characters
-    assert result == ["01234", "34567", "6789", "9"]
+    assert result == [
+        {"index": 0, "chunk": "01234"},
+        {"index": 3, "chunk": "34567"},
+        {"index": 6, "chunk": "6789"},
+        {"index": 9, "chunk": "9"},
+    ]
     # Check overlap between first two chunks
-    assert result[0][-2:] == result[1][:2]  # "34"
+    assert result[0]["chunk"][-2:] == result[1]["chunk"][:2]  # "34"
     # Check overlap between second and third chunks
-    assert result[1][-2:] == result[2][:2]  # "67"
+    assert result[1]["chunk"][-2:] == result[2]["chunk"][:2]  # "67"
 
 
 def test_overlapping_chunks_unicode_support() -> None:
@@ -122,13 +137,17 @@ def test_overlapping_chunks_unicode_support() -> None:
     text = "🎉🎊🎈🎁🎂"
     result = list(domain.overlapping_chunks(text, size=3, step=2))
     # Each emoji is one Unicode character
-    assert result == ["🎉🎊🎈", "🎈🎁🎂", "🎂"]
+    assert result == [
+        {"index": 0, "chunk": "🎉🎊🎈"},
+        {"index": 2, "chunk": "🎈🎁🎂"},
+        {"index": 4, "chunk": "🎂"},
+    ]
 
 
 def test_overlapping_chunks_newlines_preserved() -> None:
     """Test that newlines are preserved in chunks."""
     text = "line1\nline2\nline3"
-    c1, c2, c3, *rest = list(domain.overlapping_chunks(text, size=10, step=5))
+    result = list(domain.overlapping_chunks(text, size=10, step=5))
 
-    # Newlines should remain in the chunks
-    assert all(["\n" in chunk for chunk in (c1, c2, c3)])
+    # Newlines should remain in first 3 chunks
+    assert all(["\n" in item["chunk"] for item in result[:3]])

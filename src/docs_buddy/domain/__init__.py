@@ -41,15 +41,15 @@ class AnnotatedDocument:
         return json.dumps(asdict(self), default=common.json_datetime_handler)
 
 
-def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[Sequence]:
+def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:
     """Returns chunks from the sequence"""
-
-    return (seq[i : i + size] for i in range(0, len(seq), step))
+    return ({"chunk": seq[i : i + size], "index": i} for i in range(0, len(seq), step))
 
 
 def overlapping_chunks(
     text: str, size: int = 2000, step: int = 1000
-) -> Iterator[Sequence[str]]:
+) -> Iterator[dict]:
+    """Returns overlapping chunks of text from the provided text"""
     if step >= size:
         raise ValueError(
             f"step ({step}) must be less than size ({size}) for overlapping chunks"
