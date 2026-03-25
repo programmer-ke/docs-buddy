@@ -89,7 +89,7 @@ def annotate_document(
     metadata_extractor: Callable[[str], tuple[dict, str]],
 ) -> Iterator[tuple[domain.AnnotatedDocument, PathLike]]:
     """Returns a document with metadata annotations and destination path"""
-    raw_doc = domain.RawDocument.from_raw_text(raw_content)
+    raw_doc = domain.RawDocument.fromstring(raw_content)
     metadata, doc_content = metadata_extractor(raw_doc.content)
     yield domain.AnnotatedDocument(
         doc_content, path=raw_doc.path, metadata=metadata

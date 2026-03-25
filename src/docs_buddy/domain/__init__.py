@@ -21,7 +21,7 @@ class RawDocument:
     path: str
 
     @classmethod
-    def from_raw_text(cls, text: str) -> "RawDocument":
+    def fromstring(cls, text: str) -> "RawDocument":
         dict_ = json.loads(text)
         return cls(**dict_)
 
@@ -37,8 +37,26 @@ class AnnotatedDocument:
     path: str
     metadata: dict[str, Any]
 
+    @classmethod
+    def fromstring(cls, text: str) -> "AnnotatedDocument":
+        dict_ = json.loads(text)
+        return cls(**dict_)
+
     def __str__(self):
         return json.dumps(asdict(self), default=common.json_datetime_handler)
+
+
+@dataclass(frozen=True)
+class DocumentChunk:
+    """Representation of a chunk of a document"""
+
+    chunk: str
+    index: int
+    path: str
+    metadata: dict[str, Any]
+
+    def __str__(self):
+        return json.dumps(asdict(self))
 
 
 def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:

@@ -11,9 +11,19 @@ def test_raw_document_serialization() -> None:
 
 def test_initialize_raw_document_from_string() -> None:
     raw_doc_str = json.dumps({"content": "foo", "path": "bar"})
-    raw_doc = domain.RawDocument.from_raw_text(raw_doc_str)
+    raw_doc = domain.RawDocument.fromstring(raw_doc_str)
     assert raw_doc.content == "foo"
     assert raw_doc.path == "bar"
+
+
+def test_initialize_annotated_doc_from_string() -> None:
+    raw_str = json.dumps(
+        {"content": "foo", "path": "bar", "metadata": {"title": "foo", "author": "bar"}}
+    )
+    annotated_doc = domain.AnnotatedDocument.fromstring(raw_str)
+    assert annotated_doc.content == "foo"
+    assert annotated_doc.path == "bar"
+    assert annotated_doc.metadata == {"title": "foo", "author": "bar"}
 
 
 def test_annotated_document_serialization() -> None:
