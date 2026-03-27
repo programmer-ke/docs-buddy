@@ -108,8 +108,14 @@ def test_overlapping_chunks_no_overlap_raises() -> None:
 
 def test_overlapping_chunks_gap_raises() -> None:
     """Test that step > size raises ValueError."""
-    with pytest.raises(ValueError, match="step.*must be less than size"):
+    with pytest.raises(ValueError, match=r"step.*must be less than size"):
         domain.overlapping_chunks("abc", size=2, step=3)
+
+
+def test_overlapping_chunks_zero_size() -> None:
+    """Test that size < 1 raises ValueError."""
+    with pytest.raises(ValueError, match=r"step.*must be .*greater than 0"):
+        domain.overlapping_chunks("abc", size=0, step=-1)
 
 
 def test_overlapping_chunks_empty_text() -> None:
