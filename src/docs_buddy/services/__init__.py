@@ -89,8 +89,25 @@ def annotate_document(
     metadata_extractor: Callable[[str], tuple[dict, str]],
 ) -> Iterator[tuple[domain.AnnotatedDocument, PathLike]]:
     """Returns a document with metadata annotations and destination path"""
-    raw_doc = domain.RawDocument.from_raw_text(raw_content)
+    raw_doc = domain.RawDocument.fromstring(raw_content)
     metadata, doc_content = metadata_extractor(raw_doc.content)
     yield domain.AnnotatedDocument(
         doc_content, path=raw_doc.path, metadata=metadata
     ), path
+
+
+def chunk_document(
+    raw_content: str,
+    path: PathLike,
+) -> Iterator[tuple[domain.DocumentChunk, PathLike]]:
+    """Yields chunks of an annotated document"""
+    annotated_doc = domain.AnnotatedDocument.fromstring(raw_content)
+    for chunk_data in domain.overlapping_chunks(annotated_doc.content):
+        dest_prefix, extension = str(path).rsplit(".", 1)
+
+        chunk = domain.DocumentChunk(
+            path=annotated_doc.path, metadata=annotated_doc.metadata, **chunk_data
+        )
+
+        dest_path = f"{dest_prefix}_{chunk.index}.{extension}"
+        yield chunk, dest_path
