@@ -100,7 +100,7 @@ def chunk_document(
     raw_content: str,
     path: PathLike,
 ) -> Iterator[tuple[domain.DocumentChunk, PathLike]]:
-    """Returns a document with metadata annotations and destination path"""
+    """Yields chunks of an annotated document"""
     annotated_doc = domain.AnnotatedDocument.fromstring(raw_content)
     for chunk_data in domain.overlapping_chunks(annotated_doc.content):
         dest_prefix, extension = str(path).rsplit(".", 1)
