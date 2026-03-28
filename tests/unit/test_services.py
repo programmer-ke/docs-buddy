@@ -1,6 +1,7 @@
 import ast
 import json
 import re
+import functools
 import pytest
 from pathlib import Path
 
@@ -178,3 +179,38 @@ def test_document_chunking() -> None:
         prefix, extension = source_path.rsplit(".", 1)
         assert str(dest_path).startswith(prefix)
         assert re.match(f"{prefix}_{chunk.index}\\.json", str(dest_path))
+
+
+def test_composed_pipeline() -> None:
+
+    # raw document
+    source_key = "path/to/file.mdx"
+    content = "some file content" * 1000
+    metadata = {"title": "foo", "author": "bar"}
+    source_text = f"{metadata}|{content}"
+
+    # processors
+    def fake_extractor(content):
+        metadata, text = content.split("|")
+        return ast.literal_eval(metadata), text
+
+    annotate_document = functools.partial(
+        services.annotate_document, metadata_extractor=fake_extractor
+    )
+
+    process_document = services.composed_processor(
+        services.process_raw_document, annotate_document, services.chunk_document
+    )
+
+    chunk_data = list(process_document(source_text, source_key))
+    assert len(chunk_data) > 0
+
+    for chunk, path in chunk_data:
+        assert isinstance(chunk, domain.DocumentChunk)
+        assert isinstance(chunk.index, int)
+        assert chunk.metadata == metadata
+        assert str(path).endswith(".json")
+
+    # confirm that the paths are unique
+    paths = {path for _, path in chunk_data}
+    assert len(paths) == len(chunk_data)

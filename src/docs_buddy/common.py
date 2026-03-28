@@ -5,8 +5,9 @@ Should not have any local imports
 
 import datetime
 import os
+from typing import TypeAlias
 
-PathLike = str | os.PathLike
+PathLike: TypeAlias = str | os.PathLike
 
 
 class DocsBuddyError(Exception):
