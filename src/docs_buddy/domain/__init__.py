@@ -53,10 +53,10 @@ class DocumentChunk:
     chunk: str
     index: int
     path: str
-    metadata: dict[str, str]
+    metadata: dict[str, Any]
 
     def __str__(self):
-        return json.dumps(asdict(self))
+        return json.dumps(asdict(self), default=common.json_datetime_handler)
 
 
 def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:
