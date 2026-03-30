@@ -7,7 +7,7 @@ Includes:
 """
 
 from dataclasses import dataclass, asdict
-from typing import Any, Sequence, Iterator
+from typing import Any, Sequence, Iterator, TypeAlias
 import json
 
 from docs_buddy import common
@@ -56,7 +56,7 @@ class DocumentChunk:
     metadata: dict[str, Any]
 
     def __str__(self):
-        return json.dumps(asdict(self))
+        return json.dumps(asdict(self), default=common.json_datetime_handler)
 
 
 def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:
@@ -71,3 +71,6 @@ def overlapping_chunks(text: str, size: int = 2000, step: int = 1000) -> Iterato
             f"step ({step}) must be less than size ({size}) and greater than 0 for overlapping chunks"
         )
     return sliding_window(text, size, step)
+
+
+DocumentArtifact: TypeAlias = RawDocument | AnnotatedDocument | DocumentChunk

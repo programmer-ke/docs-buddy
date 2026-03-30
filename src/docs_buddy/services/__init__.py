@@ -1,5 +1,6 @@
 """Docs Buddy Service Layer"""
 
+import functools
 from typing import Protocol, Iterator, ContextManager, Callable
 from pathlib import Path
 
@@ -111,3 +112,26 @@ def chunk_document(
 
         dest_path = f"{dest_prefix}_{chunk.index}.{extension}"
         yield chunk, dest_path
+
+
+def composed_processor(
+    *processors: Callable[
+        [str, PathLike], Iterator[tuple[domain.DocumentArtifact, PathLike]]
+    ]
+) -> Callable[[str, PathLike], Iterator[tuple[domain.DocumentArtifact, PathLike]]]:
+    """Returns a processing pipeline using the processors"""
+
+    def document_pipeline(content, path):
+        """Processes a document artifact using the provided processors in order"""
+
+        def apply(args, func):
+            """Reducer that applies func to each (content, path) and flattens results."""
+            yield from (
+                result for content, path in args for result in func(str(content), path)
+            )
+
+        initial = iter([(content, path)])
+        final_results = functools.reduce(apply, processors, initial)
+        return final_results
+
+    return document_pipeline
