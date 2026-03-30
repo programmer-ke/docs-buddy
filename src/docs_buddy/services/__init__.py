@@ -125,6 +125,7 @@ def composed_processor(
         """Processes a document artifact using the provided processors in order"""
 
         def apply(args, func):
+            """Reducer that applies func to each (content, path) and flattens results."""
             yield from (
                 result for content, path in args for result in func(str(content), path)
             )
