@@ -18,6 +18,11 @@ git repository.
 - Extract the document metadata (front-matter)
 - Chunk the documents
 
+### Indexing the documentation
+
+- The document chunks are indexed for both lexical and semantic
+  search
+
 
 ## Design
 
