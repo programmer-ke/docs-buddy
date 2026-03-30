@@ -93,12 +93,33 @@ class FileSystemRepoStorage:
         subprocess.run(["git", "pull"], cwd=directory, check=True, capture_output=True)
 
 
+class FakeIntermediateStorage:
+    """In memory implementation of intermediate storage provider"""
+
+    def __init__(self, destination):
+        self._destination = Path(destination)
+        self.sink = {}
+
+    @contextmanager
+    def get_temp_location(self):
+        temp_location = str(self._destination) + ".tmp"
+        self.sink[temp_location] = {}
+        try:
+            yield temp_location
+        finally:
+            self.sink.pop(temp_location, None)
+
+    def replace_destination(self, temp_location: PathLike) -> None:
+        self.sink[str(self._destination)] = self.sink.pop(temp_location)
+
+
 class FakeDocsStorage:
     """In-memory test implementation of DocsArtifactStorage protocol."""
 
     def __init__(self, source: PathLike, destination: PathLike):
         self._source = Path(source)
         self._destination = Path(destination)
+        self._intermediate_storage = FakeIntermediateStorage(destination)
         self.actions: list = []
         self.read_paths: set = set()
 
@@ -107,25 +128,19 @@ class FakeDocsStorage:
             "src/content/Development_Page/welcome/index.mdx": SAMPLE_DOC_1,
         }
 
-        self.sink: dict = {}
-
     def __repr__(self):
         classname = type(self).__name__
         return f"{classname}({self._source!r}, {self._destination!r})"
 
     @property
-    def destination_sink(self):
-        return self.sink[str(self._destination)]
+    def sink(self):
+        return self._intermediate_storage.sink
 
     @contextmanager
     def get_temp_location(self):
-        temp_location = str(self._destination) + ".tmp"
-        self.sink[temp_location] = {}
-        self.actions.append(("MKDIR", temp_location))
-        try:
+        with self._intermediate_storage.get_temp_location() as temp_location:
+            self.actions.append(("MKDIR", temp_location))
             yield temp_location
-        finally:
-            self.sink.pop(temp_location, None)
 
     def get_source_paths(self) -> Iterator[PathLike]:
         for k in self.sources.keys():
@@ -139,12 +154,43 @@ class FakeDocsStorage:
     def write_to_location(
         self, content: str, path: PathLike, base_dir: PathLike
     ) -> None:
-        self.sink[str(base_dir)][str(path)] = content
+        self._intermediate_storage.sink[str(base_dir)][str(path)] = content
 
     def replace_destination(self, temp_location: PathLike) -> None:
-        self.sink[str(self._destination)] = self.sink.pop(temp_location)
+        self._intermediate_storage.replace_destination(temp_location)
         self.actions.append(("RMRF", str(self._destination)))
         self.actions.append(("MV", str(temp_location), str(self._destination)))
+
+
+class FileSystemIntermediateStorage:
+    """File system implementation of the intermediate storage protocol"""
+
+    def __init__(self, destination: PathLike):
+        self._destination = Path(destination)
+
+    @contextmanager
+    def get_temp_location(self, prefix=""):
+        """
+        Create a temporary directory for atomic writes.
+
+        Yields:
+            Path to temporary directory
+        """
+        with tempfile.TemporaryDirectory(
+            prefix=(prefix or f"{self._destination.name}_")
+        ) as temp_dir:
+            yield Path(temp_dir)
+
+    def replace_destination(self, temp_location: PathLike) -> None:
+        """Replaces the destination with the provided temp_location"""
+
+        temp_path = Path(temp_location)
+        dest_path = self._destination
+
+        if dest_path.exists():
+            shutil.rmtree(dest_path)
+
+        shutil.move(str(temp_path), str(dest_path))
 
 
 class FileSystemDocsStorage:
@@ -167,6 +213,7 @@ class FileSystemDocsStorage:
         self._destination = Path(destination)
         self._source = Path(source)
         self._doc_extensions = doc_extensions
+        self._intermediate_storage = FileSystemIntermediateStorage(destination)
 
     def __repr__(self):
         classname = type(self).__name__
@@ -180,9 +227,7 @@ class FileSystemDocsStorage:
         Yields:
             Path to temporary directory
         """
-        with tempfile.TemporaryDirectory(
-            prefix=(prefix or f"{self._destination.name}_")
-        ) as temp_dir:
+        with self._intermediate_storage.get_temp_location() as temp_dir:
             yield Path(temp_dir)
 
     def get_source_paths(self) -> Iterator[PathLike]:
@@ -231,13 +276,7 @@ class FileSystemDocsStorage:
     def replace_destination(self, temp_location: PathLike) -> None:
         """Replaces the destination with the provided temp_location"""
 
-        temp_path = Path(temp_location)
-        dest_path = self._destination
-
-        if dest_path.exists():
-            shutil.rmtree(dest_path)
-
-        shutil.move(str(temp_path), str(dest_path))
+        self._intermediate_storage.replace_destination(temp_location)
 
     @staticmethod
     def _is_empty_dir(path: Path) -> bool:
