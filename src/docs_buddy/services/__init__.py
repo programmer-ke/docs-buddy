@@ -52,6 +52,12 @@ class DocumentIndex(Protocol):
     ) -> None: ...
 
 
+class DocumentChunksPipeline(SupportsIntermediateStorage, Protocol):
+    """Protocol for providing document chunks"""
+
+    def get_document_chunks(self) -> Iterator[domain.DocumentChunk]: ...
+
+
 def sync_repository(url: str, storage: RepoStorage) -> None:
     """Synchronizes a git repository to local storage"""
 
@@ -149,10 +155,11 @@ def composed_processor(
     return document_pipeline
 
 
-#def index_document_chunks(storage, index):
-#
-#    document_chunks = storage.get_document_chunks()
-#
-#    with storage.get_temp_location() as tmp_location:
-#        index.fit(document_chunks, destination=tmp_location)
-#        storage.replace_destination(tmp_location)
+def index_document_chunks(
+    pipeline: DocumentChunksPipeline, index: DocumentIndex
+) -> None:
+    document_chunks = pipeline.get_document_chunks()
+
+    with pipeline.get_temp_location() as tmp_location:
+        index.fit(document_chunks, destination=tmp_location)
+        pipeline.replace_destination(tmp_location)

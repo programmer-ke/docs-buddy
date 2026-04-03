@@ -1,15 +1,17 @@
 """Docs buddy adapters reside here"""
 
 from contextlib import contextmanager
-from typing import Iterator
+from typing import Iterator, Any
 from pathlib import Path
 import subprocess
 import shutil
 import tempfile
+import json
 
 import frontmatter
 
 from docs_buddy.common import PathLike
+from docs_buddy import domain
 
 
 class FakeRepoStorage:
@@ -100,6 +102,10 @@ class FakeIntermediateStorage:
         self._destination = Path(destination)
         self.sink = {}
 
+    def __repr__(self):
+        classname = type(self).__name__
+        return f"{classname}({self._destination!r})"
+
     @contextmanager
     def get_temp_location(self):
         temp_location = str(self._destination) + ".tmp"
@@ -124,8 +130,8 @@ class FakeDocsStorage:
         self.read_paths: set = set()
 
         self.sources = {
-            "src/content/Docs/index.md": SAMPLE_DOC_2,
-            "src/content/Development_Page/welcome/index.mdx": SAMPLE_DOC_1,
+            "src/content/Docs/index.md": _SAMPLE_DOC_2,
+            "src/content/Development_Page/welcome/index.mdx": _SAMPLE_DOC_1,
         }
 
     def __repr__(self):
@@ -162,11 +168,58 @@ class FakeDocsStorage:
         self.actions.append(("MV", str(temp_location), str(self._destination)))
 
 
+class FakeDocumentChunksPipeline:
+    """Fake implementation of the document chunk pipeline"""
+
+    def __init__(self, source: PathLike, destination: PathLike):
+        self._source = source
+        self._destination = destination
+        self._intermediate_storage = FakeIntermediateStorage(destination)
+
+        self._chunks = [_SAMPLE_CHUNK_1, _SAMPLE_CHUNK_2]
+        self.actions: list = []
+
+    @property
+    def sink(self):
+        return self._intermediate_storage.sink
+
+    @contextmanager
+    def get_temp_location(self):
+        with self._intermediate_storage.get_temp_location() as temp_location:
+            self.actions.append(("MKDIR", temp_location))
+            yield temp_location
+
+    def replace_destination(self, temp_location: PathLike) -> None:
+        self._intermediate_storage.replace_destination(temp_location)
+        self.actions.append(("RMRF", str(self._destination)))
+        self.actions.append(("MV", str(temp_location), str(self._destination)))
+
+    def get_document_chunks(self):
+        return (
+            domain.DocumentChunk.fromstring(json.dumps(chunk)) for chunk in self._chunks
+        )
+
+
+class FakeIndex:
+    """Implements a document index for in memory testing"""
+
+    def __init__(self, pipeline):
+        self._pipeline = pipeline
+
+    def fit(self, chunks, destination):
+        """Index document chunks in memory"""
+        self._pipeline.sink[destination] = list(chunks)
+
+
 class FileSystemIntermediateStorage:
     """File system implementation of the intermediate storage protocol"""
 
     def __init__(self, destination: PathLike):
         self._destination = Path(destination)
+
+    def __repr__(self):
+        classname = type(self).__name__
+        return f"{classname}({self._destination!r})"
 
     @contextmanager
     def get_temp_location(self, prefix=""):
@@ -309,7 +362,7 @@ def frontmatter_metadata_extractor(text: str) -> tuple[dict, str]:
     return frontmatter.parse(text)
 
 
-SAMPLE_DOC_1 = """\
+_SAMPLE_DOC_1 = """\
 ---
 title: Open Source Community
 description: Learn how Starlight can help you build greener documentation sites and reduce your carbon footprint.
@@ -334,7 +387,7 @@ The Akash Network community welcomes contributions from all skill levels. If you
 <Calendar />
 """
 
-SAMPLE_DOC_2 = """\
+_SAMPLE_DOC_2 = """\
 ---
 title: "Akash Network Documentation"
 linkTitle: "Documentation"
@@ -362,3 +415,17 @@ Deploy applications and build on Akash Network:
 - **[Deployment](/docs/developers/deployment)** - Console, CLI, SDKs, SDL, and AuthZ
 - **[Contributing](/docs/developers/contributing)** - Contribute to Akash codebase and documentation
 """
+
+_SAMPLE_CHUNK_1 = {
+    "chunk": '```markdown\n## What is a Deployment?\n\nA deployment is your application running on the Akash Network. When you \ncreate a deployment, you\'re requesting compute resources (CPU, RAM, storage) \nfrom providers on the network.\n\nThink of it like renting a server, but:\n- Pay only for what you use (per-block pricing)\n- Choose from multiple providers bidding on your request\n- Your app runs in an isolated container\n```\n\n### For Developers (Technical Users)\n\n**Audience:** Developers integrating Akash\n\n**Requirements:**\n- Assume CLI/programming familiarity\n- Focus on concepts and integration patterns\n- Provide multi-language examples (curl, Go, TypeScript)\n- Link to detailed API reference\n- Show best practices and common patterns\n- Include error handling\n\n**Tone:** Professional, technical, concise\n\n**Example:**\n```markdown\n## Query Providers via gRPC\n\nThe provider query service returns all registered providers and their attributes.\n\n\\```go\nclient, _ := provider.NewQueryClient(conn)\nres, _ := client.Providers(context.Background(), &provider.QueryProvidersRequest{})\n\\```\n\nFilter by attribute:\n\\```go\nreq := &provider.QueryProvidersRequest{\n    Filters: &provider.ProviderFilters{\n        Attributes: []*v1beta3.Attribute{\n            {Key: "region", Value: "us-west"},\n        },\n    },\n}\n\\```\n```\n\n### For Providers (System Administrators)\n\n**Audience:** DevOps engineers, system administrators\n\n**Requirements:**\n- Assume Linux/Kubernetes knowledge\n- Be precise with commands and versions\n- Include all prerequisites\n- Provide verification steps\n- Add comprehensive troubleshooting\n- Emphasize security best practices\n- Provide automated solutions first, manual as fallback\n\n**Tone:** Direct, technical, security-conscious\n\n**Example:**\n```markdown\n## STEP 3: Configure Persistent Storage\n\nInstall Rook-Ceph for persistent storage classes (beta1, beta2, beta3).\n\n**Prerequisites:**\n- Dedicated drives (not partitions) on each worker node\n- Minimum 4 SSDs or 2 NVMe SSDs across cluster\n- Drives mus',
+    "index": 13000,
+    "path": "DOCUMENTATION_AI_GUIDE.md",
+    "metadata": {},
+}
+
+_SAMPLE_CHUNK_2 = {
+    "chunk": 'Providers(context.Background(), &provider.QueryProvidersRequest{})\n\\```\n\nFilter by attribute:\n\\```go\nreq := &provider.QueryProvidersRequest{\n    Filters: &provider.ProviderFilters{\n        Attributes: []*v1beta3.Attribute{\n            {Key: "region", Value: "us-west"},\n        },\n    },\n}\n\\```\n```\n\n### For Providers (System Administrators)\n\n**Audience:** DevOps engineers, system administrators\n\n**Requirements:**\n- Assume Linux/Kubernetes knowledge\n- Be precise with commands and versions\n- Include all prerequisites\n- Provide verification steps\n- Add comprehensive troubleshooting\n- Emphasize security best practices\n- Provide automated solutions first, manual as fallback\n\n**Tone:** Direct, technical, security-conscious\n\n**Example:**\n```markdown\n## STEP 3: Configure Persistent Storage\n\nInstall Rook-Ceph for persistent storage classes (beta1, beta2, beta3).\n\n**Prerequisites:**\n- Dedicated drives (not partitions) on each worker node\n- Minimum 4 SSDs or 2 NVMe SSDs across cluster\n- Drives must be unformatted\n\n\\```bash\n# Verify available drives (should show no filesystem)\nlsblk -f\n\n# Expected: Empty FSTYPE column for target drives\n\\```\n\n**Important:** Do not use system drives or shared partitions. Rook-Ceph \nrequires exclusive access to raw block devices.\n```\n\n### For Node Operators (Blockchain Engineers)\n\n**Audience:** Blockchain node operators, validators\n\n**Requirements:**\n- Assume blockchain experience\n- Focus on node operations and security\n- Document upgrade procedures clearly\n- Include monitoring and alerting\n- Separate architecture (for devs) from operations (for ops)\n- Provide recovery procedures\n\n**Tone:** Technical, security-focused, precise\n\n**Example:**\n```markdown\n## Validator Security with TMKMS\n\nTMKMS (Tendermint Key Management System) separates your validator key \nfrom the node, adding a critical security layer.\n\n**Architecture:**\n- Validator node runs on Akash (no private key)\n- TMKMS runs on local machine (holds private key)\n- Stunnel provides encrypted c',
+    "index": 14000,
+    "path": "DOCUMENTATION_AI_GUIDE.md",
+    "metadata": {},
+}
