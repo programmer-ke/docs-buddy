@@ -246,6 +246,43 @@ class FileSystemIntermediateStorage:
         shutil.move(str(temp_path), str(dest_path))
 
 
+class FileSystemDocumentChunksPipeline:
+    """Implements the filesytem document chunks pipeline protocol"""
+
+    def __init__(
+        self,
+        source: PathLike,
+        destination: PathLike,
+        doc_extensions: tuple[str, ...] = ("json",),
+    ):
+        self._source = Path(source)
+        self._dest = Path(destination)
+        self._intermediate_storage = FileSystemIntermediateStorage(destination)
+        self._doc_extensions = doc_extensions
+
+    def get_document_chunks(self) -> Iterator[domain.DocumentChunk]:
+        """Yields chunked documents from the source"""
+        doc_paths = (
+            p
+            for ext in self._doc_extensions
+            for p in Path(self._source).rglob(f"*.{ext}")
+        )
+
+        for path in doc_paths:
+            content = _read_file(path)
+            chunk = domain.DocumentChunk.fromstring(content)
+            yield chunk
+
+    def get_temp_location(self):
+        """Yields a temp location by delegating to intermediate storage"""
+        with self._intermediate_storage.get_temp_location() as temp_location:
+            yield temp_location
+
+    def replace_destination(self, temp_location: PathLike) -> None:
+        """Replace destination with temp location by delegating to intermediate storage"""
+        self._intermediate_storage.replace_destination(temp_location)
+
+
 class FileSystemDocsStorage:
     """File system implementation of DocsArtifactStorage protocol."""
 
@@ -310,7 +347,7 @@ class FileSystemDocsStorage:
             Document content as string
         """
         full_path = Path(self._source) / nested_path
-        return self._read_file(full_path)
+        return _read_file(full_path)
 
     def write_to_location(
         self, content: str, path: PathLike, base_dir: PathLike
@@ -337,16 +374,16 @@ class FileSystemDocsStorage:
         return path.is_dir() and not any(path.iterdir())
 
     @staticmethod
-    def _read_file(path: Path, encoding: str = "utf-8") -> str:
-        """Read file content with specified encoding."""
-        with open(path, "rt", encoding=encoding) as f:
-            return f.read()
-
-    @staticmethod
     def _write_file(path: Path, content: str, encoding: str = "utf-8") -> None:
         """Write content to file with specified encoding."""
         with open(path, "wt", encoding=encoding) as f:
             f.write(content)
+
+
+def _read_file(path: Path, encoding: str = "utf-8") -> str:
+    """Read file content with specified encoding."""
+    with open(path, "rt", encoding=encoding) as f:
+        return f.read()
 
 
 def frontmatter_metadata_extractor(text: str) -> tuple[dict, str]:
