@@ -274,6 +274,7 @@ class FileSystemDocumentChunksPipeline:
             chunk = domain.DocumentChunk.fromstring(content)
             yield chunk
 
+    @contextmanager
     def get_temp_location(self):
         """Yields a temp location by delegating to intermediate storage"""
         with self._intermediate_storage.get_temp_location() as temp_location:
