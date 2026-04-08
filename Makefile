@@ -1,4 +1,4 @@
-.PHONY: all test mypy
+.PHONY: all test mypy test_verbose
 
 all: test mypy
 
@@ -7,3 +7,6 @@ test:
 
 mypy:
 	mypy src/docs_buddy/ tests/
+
+test_verbose:
+	pytest -s tests/

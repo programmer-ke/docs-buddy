@@ -12,6 +12,7 @@ import frontmatter
 
 from docs_buddy.common import PathLike
 from docs_buddy import domain
+from .whoosh_index import WhooshDocumentIndex
 
 
 class FakeRepoStorage:
