@@ -50,7 +50,7 @@ class WhooshDocumentIndex:
                 chunk_id=chunk_id,
                 content=chunk.chunk,
                 path=chunk.path,
-                path_keywords=chunk.path.split("/"),
+                path_keywords=" ".join(chunk.path.split("/")),
                 metadata=json.dumps(chunk.metadata, default=json_datetime_handler),
             )
 
