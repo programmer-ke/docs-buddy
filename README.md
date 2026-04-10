@@ -20,7 +20,7 @@ git repository.
 
 ### Indexing the documentation
 
-- The document chunks are indexed for both lexical and semantic
+- The document chunks are indexed for both lexical (todo: and semantic)
   search
 
 
