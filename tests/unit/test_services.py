@@ -214,3 +214,28 @@ def test_composed_pipeline() -> None:
     # confirm that the paths are unique
     paths = {path for _, path in chunk_data}
     assert len(paths) == len(chunk_data)
+
+
+def test_can_index_documents() -> None:
+    source = ".chunks/programmmer-ke/akash-docs-buddy"
+    dest = ".index/programmer-ke/akash-docs-buddy"
+
+    pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
+    index = adapters.FakeIndex(pipeline)
+
+    assert dest not in pipeline.sink
+
+    services.index_document_chunks(pipeline, index)
+
+    assert len(pipeline.sink[dest]) > 0
+
+    for item in pipeline.sink[dest]:
+        assert isinstance(item, domain.DocumentChunk)
+
+    [(action1, arg1), (action2, arg2), (action3, arg3_1, arg3_2)] = pipeline.actions
+
+    # assert correct order of operations
+    tmp_location = f"{dest}.tmp"
+    assert (action1, arg1) == ("MKDIR", tmp_location)
+    assert (action2, arg2) == ("RMRF", dest)
+    assert (action3, arg3_1, arg3_2) == ("MV", tmp_location, dest)

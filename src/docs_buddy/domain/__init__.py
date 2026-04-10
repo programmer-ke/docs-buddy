@@ -55,6 +55,11 @@ class DocumentChunk:
     path: str
     metadata: dict[str, Any]
 
+    @classmethod
+    def fromstring(cls, text: str) -> "DocumentChunk":
+        dict_ = json.loads(text)
+        return cls(**dict_)
+
     def __str__(self):
         return json.dumps(asdict(self), default=common.json_datetime_handler)
 

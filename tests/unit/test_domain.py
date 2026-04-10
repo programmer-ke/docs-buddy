@@ -35,6 +35,36 @@ def test_annotated_document_serialization() -> None:
     )
 
 
+def test_initialize_document_chunk_from_string() -> None:
+    raw_str = json.dumps(
+        {
+            "chunk": "foo",
+            "path": "bar",
+            "metadata": {"title": "foo", "author": "bar"},
+            "index": 1300,
+        }
+    )
+    document_chunk = domain.DocumentChunk.fromstring(raw_str)
+    assert document_chunk.chunk == "foo"
+    assert document_chunk.path == "bar"
+    assert document_chunk.metadata == {"title": "foo", "author": "bar"}
+    assert document_chunk.index == 1300
+
+
+def test_document_chunk_serialization() -> None:
+    d = domain.DocumentChunk(
+        chunk="foo", path="bar", metadata={"title": "foo", "author": "bar"}, index=0
+    )
+    assert str(d) == json.dumps(
+        {
+            "chunk": "foo",
+            "index": 0,
+            "path": "bar",
+            "metadata": {"title": "foo", "author": "bar"},
+        }
+    )
+
+
 def test_annotated_document_datetime_serialization() -> None:
     d = domain.AnnotatedDocument(
         content="foo",

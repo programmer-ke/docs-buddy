@@ -24,20 +24,38 @@ class RepoStorage(Protocol):
     def clone_repo(self, url: str) -> None: ...
 
 
-class DocsArtifactStorage(Protocol):
+class SupportsIntermediateStorage(Protocol):
+    """Protocol providing for intermediate storage of results"""
+
+    def get_temp_location(self) -> ContextManager[PathLike]: ...
+
+    def replace_destination(self, temp_location: PathLike) -> None: ...
+
+
+class DocsArtifactStorage(SupportsIntermediateStorage, Protocol):
     """Interface for extracting raw documents from storage repository"""
 
     def get_source_paths(self) -> Iterator[PathLike]: ...
 
     def read_from_source(self, path: PathLike) -> str: ...
 
-    def get_temp_location(self) -> ContextManager[PathLike]: ...
-
     def write_to_location(
         self, content: str, path: PathLike, base_dir: PathLike
     ) -> None: ...
 
-    def replace_destination(self, temp_location: PathLike) -> None: ...
+
+class DocumentIndex(Protocol):
+    """Interface of an indexer providing fit and search capabilities"""
+
+    def fit(
+        self, chunks: Iterator[domain.DocumentChunk], destination: PathLike
+    ) -> None: ...
+
+
+class DocumentChunksPipeline(SupportsIntermediateStorage, Protocol):
+    """Protocol for providing document chunks"""
+
+    def get_document_chunks(self) -> Iterator[domain.DocumentChunk]: ...
 
 
 def sync_repository(url: str, storage: RepoStorage) -> None:
@@ -135,3 +153,13 @@ def composed_processor(
         return final_results
 
     return document_pipeline
+
+
+def index_document_chunks(
+    pipeline: DocumentChunksPipeline, index: DocumentIndex
+) -> None:
+    document_chunks = pipeline.get_document_chunks()
+
+    with pipeline.get_temp_location() as tmp_location:
+        index.fit(document_chunks, destination=tmp_location)
+        pipeline.replace_destination(tmp_location)

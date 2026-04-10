@@ -25,3 +25,10 @@ if __name__ == "__main__":
     chunks_destination = Path(".chunks") / repository_id
     docs_storage = adapters.FileSystemDocsStorage(repo_destination, chunks_destination)
     services.update_document_artifacts(docs_storage, processor=document_processor)
+
+    whoosh_index_destination = Path(".whoosh") / repository_id
+    chunks_pipeline = adapters.FileSystemDocumentChunksPipeline(
+        chunks_destination, whoosh_index_destination
+    )
+    whoosh_doc_index = adapters.WhooshDocumentIndex()
+    services.index_document_chunks(chunks_pipeline, whoosh_doc_index)
