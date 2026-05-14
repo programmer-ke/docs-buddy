@@ -1,10 +1,4 @@
-"""Docs Buddy domain objects
-
-Includes:
-- Domain entities and services
-- Events
-- Commands
-"""
+"""Domain Entities and Domain Services"""
 
 from dataclasses import dataclass, asdict
 from typing import Any, Sequence, Iterator, TypeAlias

@@ -26,4 +26,3 @@ def test_frontmatter_extractor() -> None:
     assert metadata["title"] == "Open Source Community"
     assert metadata["pubDate"] == "2020-01-19"
     assert content.strip() == document_content.strip()
-
