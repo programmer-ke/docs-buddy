@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 
 class Event:
-    """Events that is generated from domain changes"""
+    """Event that is generated from domain changes"""
 
 
 @dataclass(frozen=True)

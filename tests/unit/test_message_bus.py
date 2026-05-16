@@ -170,7 +170,7 @@ def test_dynamic_registration() -> None:
         bus.send(DummyCommand())
     assert len(received) == 0
 
-    # Register and send again – should now work
+    # Register and send again - should now work
     bus.register_command_handler(DummyCommand, handler)
     cmd = DummyCommand()
     bus.send(cmd)
