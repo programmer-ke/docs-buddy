@@ -12,15 +12,15 @@ The structure underneath the package is as follows:
 
 Domain entities and domain services
 
-#### service
+#### services
 
 Use case handlers, adapter interfaces, events and commands
 
-#### adapter
+#### adapters
 
-Infrastructure level implementations
+Infrastructure-level implementations
 
-#### entrypoint
+#### entrypoints
 
 This is the presentation layer exposed to the external world.
 
