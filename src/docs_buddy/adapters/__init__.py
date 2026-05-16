@@ -49,7 +49,9 @@ class InMemoryMessageBus:
     ) -> None:
         self._command_handlers[command] = handler
 
-    def register_event_handler(self, event: type[events.Event], handler: Callable) -> None:
+    def register_event_handler(
+        self, event: type[events.Event], handler: Callable
+    ) -> None:
         self._event_handlers[event].append(handler)
 
 
