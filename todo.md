@@ -2,6 +2,7 @@
 
 # in progress
 
+- [>] Implement lexical search over document index
 
 # done
 

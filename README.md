@@ -20,9 +20,12 @@ git repository.
 
 ### Indexing the documentation
 
-- The document chunks are indexed for both lexical (todo: and semantic)
+- The document chunks are indexed for lexical (TODO: and semantic)
   search
 
+### Answering queries from the documentation
+
+- User questions are used as queries over the search index
 
 ## Design
 
