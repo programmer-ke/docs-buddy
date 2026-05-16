@@ -1,18 +1,58 @@
-"""Docs buddy adapters reside here"""
+"""Infrastructure level Implementations"""
 
+from collections import defaultdict
 from contextlib import contextmanager
-from typing import Iterator, Any
+from typing import Iterator, Any, Callable
 from pathlib import Path
 import subprocess
 import shutil
 import tempfile
 import json
+import logging
 
 import frontmatter
 
-from docs_buddy.common import PathLike
-from docs_buddy import domain
+from docs_buddy.common import PathLike, DocsBuddyError
+from docs_buddy import domain, services
+from docs_buddy.services import events, commands
 from .whoosh_index import WhooshDocumentIndex
+
+log = logging.getLogger(__name__)
+
+
+class MemoryBusError(DocsBuddyError):
+    pass
+
+
+class InMemoryMessageBus:
+    """In memory implementation of the message bus protocol"""
+
+    def __init__(self):
+        self._event_handlers = defaultdict(list)
+        self._command_handlers = {}
+
+    def send(self, command: commands.Command) -> None:
+        try:
+            handler = self._command_handlers[type(command)]
+        except KeyError as exc:
+            msg = f"Cannot find handler for {command!r}"
+            raise MemoryBusError(msg) from exc
+
+        handler(command=command)
+
+    def publish(self, event: events.Event) -> None:
+        for handler in self._event_handlers[type(event)]:
+            handler(event=event)
+
+    def register_command_handler(
+        self, command: type[commands.Command], handler: Callable
+    ) -> None:
+        self._command_handlers[command] = handler
+
+    def register_event_handler(
+        self, event: type[events.Event], handler: Callable
+    ) -> None:
+        self._event_handlers[event].append(handler)
 
 
 class FakeRepoStorage:
@@ -399,6 +439,18 @@ def frontmatter_metadata_extractor(text: str) -> tuple[dict, str]:
         Tuple of (metadata dictionary, content without frontmatter)
     """
     return frontmatter.parse(text)
+
+
+def log_repository_synced(url: str) -> None:
+    log.info("Repository has been updated: %s", url)
+
+
+def log_document_artifacts_updated():
+    log.info("Document artifacts have been updated")
+
+
+def log_index_updated():
+    log.info("The index has been updated")
 
 
 _SAMPLE_DOC_1 = """\
