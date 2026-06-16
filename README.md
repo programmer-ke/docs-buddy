@@ -1,4 +1,4 @@
-# Docs Buddy
+ # Docs Buddy
 
 Navigate docs like a Pro.
 
@@ -20,7 +20,7 @@ git repository.
 
 ### Indexing the documentation
 
-- The document chunks are indexed for lexical (TODO: and semantic)
+- The document chunks are indexed for lexical (TODO: semantic)
   search
 
 ### Answering queries from the documentation

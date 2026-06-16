@@ -1,5 +1,7 @@
 # todo
 
+- address todo comments
+
 # in progress
 
 - [>] Implement lexical search over document index

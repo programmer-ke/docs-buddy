@@ -239,3 +239,27 @@ def test_can_index_documents() -> None:
     assert (action1, arg1) == ("MKDIR", tmp_location)
     assert (action2, arg2) == ("RMRF", dest)
     assert (action3, arg3_1, arg3_2) == ("MV", tmp_location, dest)
+
+
+def test_can_search_index() -> None:
+    source = ".chunks/programmmer-ke/akash-docs-buddy"
+    dest = ".index/programmer-ke/akash-docs-buddy"
+
+    pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
+    index = adapters.FakeIndex(pipeline)
+
+    services.index_document_chunks(pipeline, index)
+
+    query = domain.Query(text="provider")
+    results = services.search_index(query, index)
+    assert len(results) > 0
+
+    # can specify max results
+    results = services.search_index(query, index, max_results=1)
+    assert len(results) == 1
+
+    # max results must be > 0
+    bad_values = [0, -1, -30]
+    for bad_value in bad_values:
+        with pytest.raises(services.SearchIndexError):
+            _ = services.search_index(query, index, max_results=bad_value)

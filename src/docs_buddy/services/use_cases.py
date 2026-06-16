@@ -1,4 +1,4 @@
-"""Use case handlers, adapter interfaces, events and commands"""
+"""Use case handlers, adapter interfaces"""
 
 import functools
 from dataclasses import dataclass
@@ -8,8 +8,14 @@ from pathlib import Path
 from docs_buddy.common import PathLike, DocsBuddyError
 from docs_buddy import domain
 
+DEFAULT_MAX_RESULTS = 10
+
 
 class RepositorySyncError(DocsBuddyError):
+    pass
+
+
+class SearchIndexError(DocsBuddyError):
     pass
 
 
@@ -51,6 +57,10 @@ class DocumentIndex(Protocol):
     def fit(
         self, chunks: Iterator[domain.DocumentChunk], destination: PathLike
     ) -> None: ...
+
+    def search(
+        self, query: domain.Query, max_results: int
+    ) -> list[domain.QueryResult]: ...
 
 
 class DocumentChunksPipeline(SupportsIntermediateStorage, Protocol):
@@ -159,8 +169,20 @@ def composed_processor(
 def index_document_chunks(
     pipeline: DocumentChunksPipeline, index: DocumentIndex
 ) -> None:
+    """Indexes the document chunks"""
+
     document_chunks = pipeline.get_document_chunks()
 
     with pipeline.get_temp_location() as tmp_location:
         index.fit(document_chunks, destination=tmp_location)
         pipeline.replace_destination(tmp_location)
+
+
+def search_index(
+    query: domain.Query, index: DocumentIndex, max_results: int = DEFAULT_MAX_RESULTS
+) -> list[domain.QueryResult]:
+    """Returns search results from the index"""
+    if max_results < 1:
+        raise SearchIndexError("max results must be at least 1")
+
+    return index.search(query, max_results)

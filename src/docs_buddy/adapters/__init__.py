@@ -15,7 +15,7 @@ import frontmatter
 from docs_buddy.common import PathLike, DocsBuddyError
 from docs_buddy import domain, services
 from docs_buddy.services import events, commands
-from .whoosh_index import WhooshDocumentIndex
+from .whoosh_index import WhooshDocumentIndex, WhooshIndexError
 
 log = logging.getLogger(__name__)
 
@@ -141,6 +141,8 @@ class FakeIntermediateStorage:
 
     def __init__(self, destination):
         self._destination = Path(destination)
+        # todo: consider refactoring so that sink is merely
+        # manipulated here but belongs to containing object
         self.sink = {}
 
     def __repr__(self):
@@ -155,6 +157,10 @@ class FakeIntermediateStorage:
             yield temp_location
         finally:
             self.sink.pop(temp_location, None)
+
+    @property
+    def destination_content(self):
+        return self.sink[str(self._destination)]
 
     def replace_destination(self, temp_location: PathLike) -> None:
         self.sink[str(self._destination)] = self.sink.pop(temp_location)
@@ -224,6 +230,11 @@ class FakeDocumentChunksPipeline:
     def sink(self):
         return self._intermediate_storage.sink
 
+    @property
+    def destination_content(self):
+        """ """
+        return self._intermediate_storage.destination_content
+
     @contextmanager
     def get_temp_location(self):
         with self._intermediate_storage.get_temp_location() as temp_location:
@@ -250,6 +261,15 @@ class FakeIndex:
     def fit(self, chunks, destination):
         """Index document chunks in memory"""
         self._pipeline.sink[destination] = list(chunks)
+
+    def search(self, query, max_results):
+        """Return results from the existing chunks"""
+        chunks = self._pipeline.destination_content
+        return [
+            domain.QueryResult(c.chunk, c.path, c.metadata)
+            for c in chunks
+            if str(query).lower() in c.chunk.lower()
+        ][:max_results]
 
 
 class FileSystemIntermediateStorage:
