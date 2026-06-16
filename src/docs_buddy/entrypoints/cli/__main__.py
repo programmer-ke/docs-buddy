@@ -4,8 +4,10 @@ from pathlib import Path
 import os
 import argparse
 import logging
+import sys
+import pprint
 
-from docs_buddy import adapters, services
+from docs_buddy import adapters, services, domain
 from docs_buddy.services import commands
 from docs_buddy.entrypoints import bootstrap
 
@@ -74,8 +76,33 @@ def main() -> None:
             message_bus.send(sync_repo_command)
 
     elif args.query:
-        # TODO: implement query logic, potentially across multiple repos
-        print(f"Query placeholder: '{args.query}' - not yet implemented")
+        # Use the first repo ID for search (multi-repo search not yet implemented)
+        repo_id = args.repo_ids[0]
+        if len(args.repo_ids) > 1:
+            print(
+                "Warning: multiple --repo-id given, searching only in repository:",
+                repo_id,
+            )
+
+        index_path = data_dir / "whoosh" / repo_id
+        if not index_path.exists():
+            print(f"No index found for {repo_id}. Run --update-sources first.")
+            sys.exit(1)
+
+        document_index = adapters.WhooshDocumentIndex(index_location=index_path)
+        query = domain.Query(args.query)
+
+        results = services.search_index(query, document_index, max_results=5)
+
+        if not results:
+            print("No results found.")
+        else:
+            for i, result in enumerate(results, start=1):
+                print("\nSearch Result:", i)
+                print("*" * 7)
+                print("Content:", result.content)
+                print("Path:", result.path)
+                print("Metadata:", result.metadata)
 
     else:
         parser.print_help()
