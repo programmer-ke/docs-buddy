@@ -1,14 +1,14 @@
 """Adapter tests that interact with infrastructure"""
 
-import pytest
 from pathlib import Path
 import shutil
 import tempfile
 import json
 
+import pytest
 import whoosh.index
 
-from docs_buddy import adapters, domain
+from docs_buddy import adapters, domain, common
 
 
 def test_get_temp_location_creates_and_cleans_up() -> None:
@@ -112,6 +112,38 @@ def test_whoosh_document_index_fit_creates_index() -> None:
                 assert "path" in doc
                 assert doc["path"] == "DOCUMENTATION_AI_GUIDE.md"
                 assert "metadata" in doc
+
+
+def test_incorrectly_initialized_index_raises() -> None:
+    # initialize index without index directory
+    index = adapters.WhooshDocumentIndex()
+
+    # should raise an error on search
+    with pytest.raises(adapters.WhooshIndexError):
+        query = domain.Query("providers")
+        results = index.search(query, max_results=10)
+
+
+def test_can_search_whoosh_index() -> None:
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        indexer = adapters.WhooshDocumentIndex()
+
+        chunks = [
+            domain.DocumentChunk.fromstring(json.dumps(_SAMPLE_CHUNK_1)),
+            domain.DocumentChunk.fromstring(json.dumps(_SAMPLE_CHUNK_2)),
+        ]
+
+        indexer.fit(iter(chunks), temp_dir)
+
+        document_index = adapters.WhooshDocumentIndex(temp_dir)
+        query = domain.Query("providers")
+        results = document_index.search(query, max_results=10)
+        assert len(results) > 1
+
+        # it should be possible to specify max length of results
+        assert len(document_index.search(query, max_results=1)) == 1
 
 
 def test_whoosh_document_index_fitting_for_empty_documents() -> None:

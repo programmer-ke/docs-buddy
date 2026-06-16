@@ -7,6 +7,10 @@ import json
 from docs_buddy import common
 
 
+class InvalidQueryError(common.DocsBuddyError):
+    pass
+
+
 @dataclass(frozen=True)
 class RawDocument:
     """Representation of an unprocessed document"""
@@ -56,6 +60,36 @@ class DocumentChunk:
 
     def __str__(self):
         return json.dumps(asdict(self), default=common.json_datetime_handler)
+
+
+@dataclass(frozen=True)
+class Query:
+    """Representation of a user query"""
+
+    text: str
+
+    def __post_init__(self):
+        clean_query = self.text.strip()
+        if not clean_query:
+            raise InvalidQueryError(
+                f"Invalid query: '{clean_query}'. Length must be > 0 after stripping"
+            )
+        super().__setattr__("text", clean_query)
+
+    def __str__(self):
+        return self.text
+
+
+@dataclass(frozen=True)
+class QueryResult:
+    """Result of a user query"""
+
+    content: str
+    path: str
+    metadata: dict[str, Any]
+
+    def __str__(self):
+        return json.dumps(asdict(self))
 
 
 def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:

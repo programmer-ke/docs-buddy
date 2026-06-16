@@ -197,3 +197,19 @@ def test_overlapping_chunks_newlines_preserved() -> None:
 
     # Newlines should remain in first 3 chunks
     assert all(["\n" in item["chunk"] for item in result[:3]])
+
+
+def test_query_parsing_processes_text() -> None:
+    valid_query = "foo"
+    empty_query = ""
+    whitespace_query = " " * 10
+    padded_query = " bar   "
+
+    assert str(domain.Query(valid_query)) == valid_query
+    assert str(domain.Query(padded_query)) == "bar"
+
+    with pytest.raises(domain.InvalidQueryError):
+        _ = domain.Query(empty_query)
+
+    with pytest.raises(domain.InvalidQueryError):
+        _ = domain.Query(whitespace_query)
