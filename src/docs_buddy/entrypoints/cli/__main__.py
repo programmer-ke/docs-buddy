@@ -5,7 +5,6 @@ import os
 import argparse
 import logging
 import sys
-import pprint
 
 from docs_buddy import adapters, services, domain
 from docs_buddy.services import commands
