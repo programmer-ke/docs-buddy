@@ -265,13 +265,18 @@ def test_can_search_index() -> None:
             _ = services.search_index(query, index, max_results=bad_value)
 
 
-def test_find_answer_returns_structured_response() -> None:
-    query = domain.Query("any query")
-    response = services.find_answer(query)
+def test_find_answer_returns_top_chunk() -> None:
+    source = ".chunks/test-repo"
+    dest = ".index/test-repo"
+    pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
+    index = adapters.FakeIndex(pipeline)
+    services.index_document_chunks(pipeline, index)
+
+    query = domain.Query("provider")
+    base_url = "https://github.com/test/docs/blob/main/"
+    response = services.find_answer(query, index, base_url)
 
     assert isinstance(response, domain.QueryResponse)
-    assert isinstance(response.answer, str)
     assert len(response.answer) > 0
-    assert isinstance(response.citations, list)
-    assert len(response.citations) > 0
-    assert all(isinstance(c, str) for c in response.citations)
+    assert len(response.citations) == 1
+    assert response.citations[0].startswith(base_url)

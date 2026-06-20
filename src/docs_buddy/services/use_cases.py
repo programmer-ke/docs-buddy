@@ -188,9 +188,18 @@ def search_index(
     return index.search(query, max_results)
 
 
-def find_answer(query: domain.Query) -> domain.QueryResponse:
-    """Return a hardcoded answer with a hardcoded citation."""
-    return domain.QueryResponse(
-        answer="This is a placeholder answer.",
-        citations=["https://example.com/doc"],
-    )
+def find_answer(
+    query: domain.Query,
+    index: DocumentIndex,
+    base_url: str | None = None,
+) -> domain.QueryResponse:
+    """Return the top search result as answer + citation.
+
+    If no results, returns an empty answer and citations list.
+    """
+    results = search_index(query, index, max_results=1)
+    if not results:
+        return domain.QueryResponse(answer="", citations=[])
+    top = results[0]
+    citation = f"{base_url}{top.path}" if base_url else top.path
+    return domain.QueryResponse(answer=top.content, citations=[citation])

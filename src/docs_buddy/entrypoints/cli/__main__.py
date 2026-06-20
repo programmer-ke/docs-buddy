@@ -93,11 +93,15 @@ def main() -> None:
             log.error("Invalid query detected: %s", exc)
             sys.exit(1)
 
-        response = services.find_answer(query)
-        print(f"Answer: {response.answer}")
-        print("Citations:")
-        for citation in response.citations:
-            print(f"  - {citation}")
+        base_url = f"https://github.com/{repo_id}/blob/main/"
+        response = services.find_answer(query, document_index, base_url)
+        if not response.answer:
+            print("No results found.")
+        else:
+            print(f"Answer: {response.answer}")
+            print("Citations:")
+            for citation in response.citations:
+                print(f"  - {citation}")
 
     else:
         parser.print_help()

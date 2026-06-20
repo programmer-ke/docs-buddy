@@ -10,21 +10,6 @@ Status legend:
 - [ ] address todo comments
 
 
-- [ ] **US-004: User can submit a query and receive a real answer from the document index (no AI agent yet)**  
-  *As a user, I want to submit a query and receive an answer synthesized from the document index using a simple deterministic strategy (e.g., return the top chunk text as the answer), so that I can validate the search and retrieval pipeline end-to-end.*  
-  - [ ] **Scenario 4.1:** Query returns top chunk as answer  
-    Given the documentation index has been built and contains indexed chunks  
-    When the user submits a valid query  
-    Then the system returns a structured response where:  
-      - The `answer` field contains the text of the top-ranked chunk  
-      - The `citations` field contains the document URL of that chunk  
-  - [ ] **Scenario 4.2:** Query with no matching chunks  
-    Given the documentation index has been built but contains no chunks matching the query  
-    When the user submits a valid query  
-    Then the system returns a structured response where:  
-      - The `answer` field is an empty string  
-      - The `citations` field is an empty list
-
 - [ ] **US-005: User can submit a query and receive an answer synthesized by an AI agent using the search tool**  
   *As a user, I want to submit a query and receive an answer synthesized by an AI agent that uses the search tool to retrieve relevant chunks, so that I get a natural language answer grounded in the documentation.*  
   - [ ] **Scenario 5.1:** AI agent returns answer with citations  
@@ -91,6 +76,20 @@ Status legend:
 
 ## done
 
+- [x] **US-004: User can submit a query and receive a real answer from the document index (no AI agent yet)**  
+  *As a user, I want to submit a query and receive an answer synthesized from the document index using a simple deterministic strategy (e.g., return the top chunk text as the answer), so that I can validate the search and retrieval pipeline end-to-end.*  
+  - [x] **Scenario 4.1:** Query returns top chunk as answer  
+    Given the documentation index has been built and contains indexed chunks  
+    When the user submits a valid query  
+    Then the system returns a structured response where:  
+      - The `answer` field contains the text of the top-ranked chunk  
+      - The `citations` field contains the document URL of that chunk  
+  - [x] **Scenario 4.2:** Query with no matching chunks  
+    Given the documentation index has been built but contains no chunks matching the query  
+    When the user submits a valid query  
+    Then the system returns a structured response where:  
+      - The `answer` field is an empty string  
+      - The `citations` field is an empty list
 - [x] **US-003: User can submit a query and receive a hardcoded answer with a hardcoded citation**  
   *As a user, I want to submit a query and receive a hardcoded answer with a hardcoded citation, so that I can see the end-to-end flow working (even if the answer is not real) and validate the response structure.*  
   - [x] **Scenario 3.1:** Query submitted returns hardcoded answer  
