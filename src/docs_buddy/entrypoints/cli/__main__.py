@@ -90,10 +90,14 @@ def main() -> None:
         try:
             query = domain.Query(args.query)
         except domain.InvalidQueryError as exc:
-            log.exception("Invalid query detected")
+            log.error("Invalid query detected: %s", exc)
             sys.exit(1)
 
-        services.find_answer(query)
+        response = services.find_answer(query)
+        print(f"Answer: {response.answer}")
+        print("Citations:")
+        for citation in response.citations:
+            print(f"  - {citation}")
 
     else:
         parser.print_help()

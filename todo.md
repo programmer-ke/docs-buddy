@@ -10,20 +10,6 @@ Status legend:
 - [ ] address todo comments
 
 
-- [ ] **US-003: User can submit a query and receive a hardcoded answer with a hardcoded citation**  
-  *As a user, I want to submit a query and receive a hardcoded answer with a hardcoded citation, so that I can see the end-to-end flow working (even if the answer is not real) and validate the response structure.*  
-  - [ ] **Scenario 3.1:** Query submitted returns hardcoded answer  
-    Given the documentation index has been built  
-    And the query is valid  
-    When the user submits any query  
-    Then the system returns a structured response containing:  
-      - A hardcoded answer text (e.g., "This is a placeholder answer.")  
-      - A list with one hardcoded citation (e.g., `["https://example.com/doc"]`)  
-  - [ ] **Scenario 3.2:** Response structure is correct  
-    Given the documentation index has been built  
-    When the user submits a valid query  
-    Then the response contains exactly two fields: `answer` (string) and `citations` (list of strings)
-
 - [ ] **US-004: User can submit a query and receive a real answer from the document index (no AI agent yet)**  
   *As a user, I want to submit a query and receive an answer synthesized from the document index using a simple deterministic strategy (e.g., return the top chunk text as the answer), so that I can validate the search and retrieval pipeline end-to-end.*  
   - [ ] **Scenario 4.1:** Query returns top chunk as answer  
@@ -105,6 +91,15 @@ Status legend:
 
 ## done
 
+- [x] **US-003: User can submit a query and receive a hardcoded answer with a hardcoded citation**  
+  *As a user, I want to submit a query and receive a hardcoded answer with a hardcoded citation, so that I can see the end-to-end flow working (even if the answer is not real) and validate the response structure.*  
+  - [x] **Scenario 3.1:** Query submitted returns hardcoded answer  
+    Given the documentation index has been built  
+    And the query is valid  
+    When the user submits any query  
+    Then the system returns a structured response containing:  
+      - A hardcoded answer text (e.g., "This is a placeholder answer.")  
+      - One hardcoded citation in the output text (e.g., `"https://example.com/doc"`)  
 - [x] **US-002: User can submit a natural language query and receive a validation error for empty or malformed input**  
   *As a user, I want to receive a validation error when I submit an empty or malformed query, so that I know my input was not accepted and I can correct it.*  
   - [x] **Scenario 2.1:** Empty query submitted  

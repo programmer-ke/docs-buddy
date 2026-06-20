@@ -92,6 +92,17 @@ class QueryResult:
         return json.dumps(asdict(self))
 
 
+@dataclass(frozen=True)
+class QueryResponse:
+    """Structured response for a query"""
+
+    answer: str
+    citations: list[str]
+
+    def __str__(self):
+        return json.dumps(asdict(self))
+
+
 def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:
     """Returns chunks from the sequence"""
     return ({"chunk": seq[i : i + size], "index": i} for i in range(0, len(seq), step))

@@ -188,4 +188,9 @@ def search_index(
     return index.search(query, max_results)
 
 
-def find_answer(query: domain.Query) -> None: ...
+def find_answer(query: domain.Query) -> domain.QueryResponse:
+    """Return a hardcoded answer with a hardcoded citation."""
+    return domain.QueryResponse(
+        answer="This is a placeholder answer.",
+        citations=["https://example.com/doc"],
+    )
