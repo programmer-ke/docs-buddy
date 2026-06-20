@@ -1,17 +1,14 @@
-# todo
+# TODO List
+
+Status legend:
+ - [ ] todo
+ - [>] in progress
+ - [x] done
+
+## todo
 
 - [ ] address todo comments
 
-- [ ] **US-001: User can submit a natural language query and receive a "no index" error** 
-  *As a user, I want to submit a natural language question and get a clear error message when the documentation index has not been built, so that I know the system is not ready and I can take action (e.g., trigger a sync).* 
-  - [ ] **Scenario 1.1:** Query submitted with no index built 
-    Given the documentation index has not been built 
-    When the user submits a natural language question 
-    Then the system returns an error message: "Documentation index is not available. Please sync a repository first."  
-  - [ ] **Scenario 1.2:** Query submitted after index is built 
-    Given the documentation index has been built 
-    When the user submits a natural language question 
-    Then the system does not return the "no index" error
 
 - [ ] **US-002: User can submit a natural language query and receive a validation error for empty or malformed input**  
   *As a user, I want to receive a validation error when I submit an empty or malformed query, so that I know my input was not accepted and I can correct it.*  
@@ -118,12 +115,24 @@
     Then the web page displays the error message: "Documentation index is not available. Please sync a repository first."
 
 
-# in progress
+## in progress
 
 
-
-# done
+## done
 
 - [x] brainstorm agent implementation
 - [x] refactor to use commands/events/message-bus
 - [x] Implement lexical search over document index
+
+## Discarded
+
+- [x] **US-001: User can submit a natural language query and receive a "no index" error** (this should be caught by bootstrap)
+  *As a user, I want to submit a natural language question and get a clear error message when the documentation index has not been built, so that I know the system is not ready and I can take action (e.g., trigger a sync).* 
+  - [ ] **Scenario 1.1:** Query submitted with no index built 
+    Given the documentation index has not been built 
+    When the user submits a natural language question 
+    Then the system returns an error message: "Documentation index is not available. Please sync a repository first."  
+  - [ ] **Scenario 1.2:** Query submitted after index is built 
+    Given the documentation index has been built 
+    When the user submits a natural language question 
+    Then the system does not return the "no index" error
