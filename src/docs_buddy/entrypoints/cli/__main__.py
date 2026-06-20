@@ -16,6 +16,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+log = logging.getLogger(__name__)
+
 
 def _get_data_dir() -> Path:
     """Return the XDG data directory"""
@@ -75,33 +77,23 @@ def main() -> None:
             message_bus.send(sync_repo_command)
 
     elif args.query:
-        # Use the first repo ID for search (multi-repo search not yet implemented)
+        # todo: Use the first repo ID for search (multi-repo search not yet implemented)
         repo_id = args.repo_ids[0]
-        if len(args.repo_ids) > 1:
-            print(
-                "Warning: multiple --repo-id given, searching only in repository:",
-                repo_id,
-            )
 
         index_path = data_dir / "whoosh" / repo_id
         if not index_path.exists():
-            print(f"No index found for {repo_id}. Run --update-sources first.")
+            log.error("No index found for %s. Run --update-sources first", repo_id)
             sys.exit(1)
 
         document_index = adapters.WhooshDocumentIndex(index_location=index_path)
-        query = domain.Query(args.query)
 
-        results = services.search_index(query, document_index, max_results=5)
+        try:
+            query = domain.Query(args.query)
+        except domain.InvalidQueryError as exc:
+            log.exception("Invalid query detected")
+            sys.exit(1)
 
-        if not results:
-            print("No results found.")
-        else:
-            for i, result in enumerate(results, start=1):
-                print("\nSearch Result:", i)
-                print("*" * 7)
-                print("Content:", result.content)
-                print("Path:", result.path)
-                print("Metadata:", result.metadata)
+        services.find_answer(query)
 
     else:
         parser.print_help()

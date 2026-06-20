@@ -186,3 +186,6 @@ def search_index(
         raise SearchIndexError("max results must be at least 1")
 
     return index.search(query, max_results)
+
+
+def find_answer(query: domain.Query) -> None: ...

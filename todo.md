@@ -10,21 +10,6 @@ Status legend:
 - [ ] address todo comments
 
 
-- [ ] **US-002: User can submit a natural language query and receive a validation error for empty or malformed input**  
-  *As a user, I want to receive a validation error when I submit an empty or malformed query, so that I know my input was not accepted and I can correct it.*  
-  - [ ] **Scenario 2.1:** Empty query submitted  
-    Given the documentation index has been built  
-    When the user submits an empty string as the query  
-    Then the system returns a validation error: "Query cannot be empty."  
-  - [ ] **Scenario 2.2:** Malformed query submitted (e.g., only whitespace)  
-    Given the documentation index has been built  
-    When the user submits a query consisting only of whitespace  
-    Then the system returns a validation error: "Query cannot be empty."  
-  - [ ] **Scenario 2.3:** Valid query submitted  
-    Given the documentation index has been built  
-    When the user submits a non-empty, non-whitespace query  
-    Then the system does not return a validation error
-
 - [ ] **US-003: User can submit a query and receive a hardcoded answer with a hardcoded citation**  
   *As a user, I want to submit a query and receive a hardcoded answer with a hardcoded citation, so that I can see the end-to-end flow working (even if the answer is not real) and validate the response structure.*  
   - [ ] **Scenario 3.1:** Query submitted returns hardcoded answer  
@@ -120,11 +105,25 @@ Status legend:
 
 ## done
 
+- [x] **US-002: User can submit a natural language query and receive a validation error for empty or malformed input**  
+  *As a user, I want to receive a validation error when I submit an empty or malformed query, so that I know my input was not accepted and I can correct it.*  
+  - [x] **Scenario 2.1:** Empty query submitted  
+    Given the documentation index has been built  
+    When the user submits an empty string as the query  
+    Then the system returns a validation error: "Query cannot be empty."  
+  - [x] **Scenario 2.2:** Malformed query submitted (e.g., only whitespace)  
+    Given the documentation index has been built  
+    When the user submits a query consisting only of whitespace  
+    Then the system returns a validation error: "Query cannot be empty."  
+  - [x] **Scenario 2.3:** Valid query submitted  
+    Given the documentation index has been built  
+    When the user submits a non-empty, non-whitespace query  
+    Then the system does not return a validation error
 - [x] brainstorm agent implementation
 - [x] refactor to use commands/events/message-bus
 - [x] Implement lexical search over document index
 
-## Discarded
+## Parked
 
 - [x] **US-001: User can submit a natural language query and receive a "no index" error** (this should be caught by bootstrap)
   *As a user, I want to submit a natural language question and get a clear error message when the documentation index has not been built, so that I know the system is not ready and I can take action (e.g., trigger a sync).* 
