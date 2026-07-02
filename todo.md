@@ -97,6 +97,15 @@ Status legend:
     And the AI agent is configured  
     When the user runs `docs-buddy query "What is X?"`  
     Then the CLI prints the answer and the list of citations  
+	- CLI design decisions:
+	  - configuration
+	    - use hostname + path as repo id e.g. github.com/programmer-ke/docs-buddy
+		- specify the raw file url in config
+		- use yaml config files for conf
+		- walk up from current to home directory to find config file
+		  - add a flag to show user the config file used for current invocation
+		  - Add a flag to create config file from template in current location
+	
   - [ ] **Scenario 7.2:** CLI query returns error message  
     Given the documentation index has not been built  
     When the user runs `docs-buddy query "What is X?"`  
