@@ -106,6 +106,12 @@ class QueryResponse:
         cls_name = type(self).__name__
         return f"{cls_name}({self.answer!r}, {self.citations!r})"
 
+    @classmethod
+    def fromstring(cls, text: str) -> "QueryResponse":
+        # todo: factor out json serialization
+        dict_ = json.loads(text)
+        return cls(**dict_)
+
 
 def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:
     """Returns chunks from the sequence"""

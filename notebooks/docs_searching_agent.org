@@ -1,0 +1,306 @@
+#+PROPERTY: header-args :results output :session *docs-agent*
+
+Initialize agent with custom provider:
+
+#+begin_src python
+
+import asyncio
+from dataclasses import dataclass, asdict
+import os
+
+from openai import AsyncOpenAI
+
+from agents import (
+    Agent,
+    Model,
+    ModelProvider,
+    OpenAIChatCompletionsModel,
+    RunConfig,
+    Runner,
+    RunHooks,
+    function_tool,
+    set_tracing_disabled,
+)
+from agents.agent import StopAtTools
+
+# set environment variables if necessary
+#os.environ["OPENAI_API_KEY"] = "sk-..."
+#os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
+
+BASE_URL = os.getenv("OPENAI_BASE_URL") or ""
+API_KEY = os.getenv("OPENAI_API_KEY") or ""
+MODEL_NAME = "deepseek/deepseek-v4-flash"
+
+if not BASE_URL or not API_KEY or not MODEL_NAME:
+    raise ValueError(
+        "Please set BASE_URL, API_KEY, MODEL_NAME"
+    )
+
+
+client = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
+set_tracing_disabled(disabled=True)
+
+
+class CustomModelProvider(ModelProvider):
+    def get_model(self, model_name: str | None) -> Model:
+        return OpenAIChatCompletionsModel(model=model_name or MODEL_NAME, openai_client=client)
+
+
+CUSTOM_MODEL_PROVIDER = CustomModelProvider()
+
+#+end_src
+
+#+RESULTS:
+
+Create searching tools:
+
+#+begin_src python
+from pathlib import Path
+import json
+
+from docs_buddy import adapters
+
+index_path = Path.home() / ".local" / "share" / "docs-buddy" / "whoosh" / "akash-network/website"
+
+index = adapters.WhooshDocumentIndex(index_path)
+
+search_tool = function_tool(adapters.make_search_tool(index))
+
+@dataclass
+class QueryResponse:
+    """A response to the user's query"""
+    final_answer: str
+    citations: list[str]
+
+    def __str__(self):
+        return json.dumps(asdict(self))
+        
+
+
+@function_tool
+def generate_final_answer(final_answer: str, citations: list[str]) -> QueryResponse:
+    """Generates the final answer to the user's query
+
+    Args:
+      final_answer (str): The final answer to the user's query
+      citations (list[str]): A list of paths from the search tool results that were instrumental
+                             in generating the answer
+
+    Returns:
+      QueryResponse: A structured response to the user's query
+    """
+
+    return QueryResponse(final_answer, citations)
+
+#+end_src
+
+#+RESULTS:
+
+Trigger agentic search:
+
+#+RESULTS:
+
+#+begin_src python
+
+agent_instructions = """
+You are a documentation assistant equipped to answer user queries
+by searching the docs.
+
+IMPORTANT: Always call generate_final_answer as your final output.
+"""
+
+
+class LoggingHooks(RunHooks):
+    async def on_agent_start(self, context, agent):
+        print(f"Starting agent: {agent.name}, usage: {context.usage.output_tokens}")
+
+    async def on_llm_end(self, context, agent, response):
+        print(f"llm ended: agent {agent.name} produced output length{len(response.output)}, usage: {context.usage.output_tokens}")
+
+    async def on_llm_start(self, context, agent, system_prompt, input_items):
+        print(f"llm started with: {agent.name}, usage: {context.usage.output_tokens}, prompt: {system_prompt}, inputs length {len(input_items)}")
+
+    async def on_agent_end(self, context, agent, output):
+        print(f"agent ended: {agent.name} finished with usage: {context.usage.output_tokens}")
+
+    async def on_tool_start(self, context, agent, tool):
+        print(f"tool {tool.name} started with: agent {agent.name}, usage: {context.usage.output_tokens}")
+
+    async def on_tool_end(self, context, agent, tool, result):
+        print(f"tool {tool.name} ended with: agent {agent.name}, usage: {context.usage.output_tokens}")
+
+
+async def main(user_query):
+    agent = Agent(
+        name="Docs Buddy Agent",
+        instructions=agent_instructions,
+        tools=[search_tool, generate_final_answer],
+        tool_use_behavior=StopAtTools(stop_at_tool_names=["generate_final_answer"]),
+    )
+
+    # This will use the custom model provider
+    result = await Runner.run(
+        agent,
+        user_query,
+        hooks=LoggingHooks(),
+        run_config=RunConfig(model_provider=CUSTOM_MODEL_PROVIDER),
+    )
+    response = result.final_output
+    d = json.loads(response)
+    print(d['final_answer'])
+    for path in d['citations']:
+        print(f"https://github.com/akash-network/website/blob/main/{path}\n")
+    
+
+user_query="Hello, I have some spare dedicated servers I'd hopefully like to cover my costs on until I have a better use. I'm trying to figure out how much I can make from them but it's not very clear. I found a calculator but I have to enter the price per resource, which doesn't really help when I don't know market prices?"
+
+asyncio.run(main(user_query))
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Starting agent: Docs Buddy Agent, usage: 0
+llm started with: Docs Buddy Agent, usage: 0, prompt: 
+You are a documentation assistant equipped to answer user queries
+by searching the docs.
+
+IMPORTANT: Always call generate_final_answer as your final output.
+, inputs length 1
+llm ended: agent Docs Buddy Agent produced output length3, usage: 148
+tool search_document_index started with: agent Docs Buddy Agent, usage: 148
+tool search_document_index started with: agent Docs Buddy Agent, usage: 148
+search query: dedicated server pricing calculator earnings, results:  5
+search query: market prices resources compute cost, results:  5
+tool search_document_index ended with: agent Docs Buddy Agent, usage: 148
+tool search_document_index ended with: agent Docs Buddy Agent, usage: 148
+llm started with: Docs Buddy Agent, usage: 148, prompt: 
+You are a documentation assistant equipped to answer user queries
+by searching the docs.
+
+IMPORTANT: Always call generate_final_answer as your final output.
+, inputs length 6
+llm ended: agent Docs Buddy Agent produced output length3, usage: 292
+tool search_document_index started with: agent Docs Buddy Agent, usage: 292
+tool search_document_index started with: agent Docs Buddy Agent, usage: 292
+search query: Provider Earn Calculator how to use price per resource, results:  5search query: CPU memory GPU pricing market rates Akash provider, results:  5
+
+tool search_document_index ended with: agent Docs Buddy Agent, usage: 292
+tool search_document_index ended with: agent Docs Buddy Agent, usage: 292
+llm started with: Docs Buddy Agent, usage: 292, prompt: 
+You are a documentation assistant equipped to answer user queries
+by searching the docs.
+
+IMPORTANT: Always call generate_final_answer as your final output.
+, inputs length 11
+llm ended: agent Docs Buddy Agent produced output length3, usage: 435
+tool search_document_index started with: agent Docs Buddy Agent, usage: 435
+tool search_document_index started with: agent Docs Buddy Agent, usage: 435
+search query: bid price scale CPU RAM disk pricing strategy provider earnings, results:  5search query: provider explorer active providers lease prices market, results:  5
+
+tool search_document_index ended with: agent Docs Buddy Agent, usage: 435
+tool search_document_index ended with: agent Docs Buddy Agent, usage: 435
+llm started with: Docs Buddy Agent, usage: 435, prompt: 
+You are a documentation assistant equipped to answer user queries
+by searching the docs.
+
+IMPORTANT: Always call generate_final_answer as your final output.
+, inputs length 16
+llm ended: agent Docs Buddy Agent produced output length2, usage: 521
+tool search_document_index started with: agent Docs Buddy Agent, usage: 521
+search query: GPU pricing page akash.network/gpus market rates, results:  5
+tool search_document_index ended with: agent Docs Buddy Agent, usage: 521
+llm started with: Docs Buddy Agent, usage: 521, prompt: 
+You are a documentation assistant equipped to answer user queries
+by searching the docs.
+
+IMPORTANT: Always call generate_final_answer as your final output.
+, inputs length 19
+llm ended: agent Docs Buddy Agent produced output length2, usage: 1644
+tool generate_final_answer started with: agent Docs Buddy Agent, usage: 1644
+tool generate_final_answer ended with: agent Docs Buddy Agent, usage: 1644
+agent ended: Docs Buddy Agent finished with usage: 1644
+## Understanding Your Potential Earnings as an Akash Provider
+
+Great question! It's a common concern that the calculator asks you to input prices without giving you market context. Let me break down what the docs tell us.
+
+### 📊 The Provider Earn Calculator
+
+You can find it here: **[Provider Earn Calculator](https://akash.network/pricing/provider-calculator/)**
+
+It was specifically built by the Praetor team because many users struggled with the exact same issue — not knowing what prices to set for CPU, RAM, and Disk. The calculator uses the most recent Osmosis price for AKT-to-USD conversion to help you estimate your earnings.
+
+### 💰 General Revenue Estimates (from the docs)
+
+Based on the documentation's **"Should I Run a Provider?"** guide, here are the ballpark ranges:
+
+| Resource | Estimated Monthly Revenue |
+|---|---|
+| **CPU/Memory** | **$10–$100+/month** (highly variable) |
+| **GPUs** | **$100–$1,000+/month** (high demand) |
+| **Persistent Storage** | **$10–$50+/month** |
+
+> **Note:** Revenue depends heavily on your capacity, uptime, pricing strategy, and current market demand.
+
+### 🔧 How Pricing Actually Works (Pricing Strategy)
+
+You have **two options** for setting your pricing in the provider configuration:
+
+,**1. Simple Scale-Based Pricing** (easiest to start with)
+You set multipliers in your `provider.yaml` like:
+```yaml
+bidpricecpuscale: 1.0
+bidpricememoryscale: 1.0
+bidpricestoragescale: 1.0
+bidpriceendpointscale: 1.0
+```
+The price is calculated as: `(cpu_units × cpu_scale) + (memory_units × memory_scale) + (storage_units × storage_scale) + (endpoints × endpoint_scale)`
+
+,**2. Custom Shell Script Pricing** (advanced)
+Write a custom `price_script.sh` that takes order details as input and outputs your price in uact/block. This gives you maximum flexibility — you can dynamically adjust based on demand, time of day, etc.
+
+### 👀 How to See What Other Providers Are Charging
+
+This is the best way to figure out competitive pricing without guessing:
+
+- **Browser Active Providers** at the [Provider Explorer](https://console.akash.network/providers) — you can see active providers, their resources, and lease counts
+- **Check the GPU Pricing Page** at [akash.network/gpus](https://akash.network/pricing/gpus/) — shows real-time pricing from providers for different GPU models
+- For reference, GPU prices on Akash are roughly **3-5x cheaper** than AWS/GCP/Azure, e.g.:
+  - RTX 4090: ~$0.50–$1.50/hr
+  - A100 40GB: ~$1.50–$2.50/hr (vs $4.10/hr on AWS)
+  - H100: ~$2.50–$4.00/hr (vs $8.03/hr on AWS)
+
+### 🎯 Recommendations for Starting
+
+1. **Start conservative** — Use the **Provider Earn Calculator** with modest multipliers (try 0.5–1.0 for the scale values) to see baseline estimates
+2. **Check existing providers** — Browse the Provider Explorer to see what other providers with similar hardware are offering
+3. **Join the community** — The docs strongly recommend asking in the **#providers channel on Discord** ([discord.akash.network](https://discord.akash.network)) where experienced providers can give you specific advice for your hardware setup
+4. **Consider GPUs if you have them** — GPU compute has the highest demand and best returns
+
+### ⚠️ Also Consider Your Costs
+
+Don't forget to subtract your ongoing expenses:
+- **Electricity:** ~$20–$200+/month depending on hardware
+- **Internet:** ~$50–$100/month (business connection recommended)
+- **Maintenance:** Your time (2–4 hours/week average)
+- **Bid fees:** ~0.005 AKT per bid submission
+- **AKT for gas:** Have some AKT available for transaction fees
+
+Hope this helps you get a clearer picture! The key is to start with reasonable pricing, then adjust based on how many leases you're winning.
+https://github.com/akash-network/website/blob/main/src/content/Docs/providers/getting-started/should-i-run-a-provider/index.md
+
+https://github.com/akash-network/website/blob/main/src/content/Docs/providers/getting-started/hardware-requirements/index.md
+
+https://github.com/akash-network/website/blob/main/src/content/Docs/providers/architecture/bid-engine/index.md
+
+https://github.com/akash-network/website/blob/main/src/content/Docs/learn/core-concepts/gpu-deployments/index.md
+
+https://github.com/akash-network/website/blob/main/src/content/Blog/how-to-become-an-akash-provider-in-20-minutes-or-less/index.md
+#+end_example
+
+
+#+begin_src python
+#+end_src
+
+#+RESULTS:
+

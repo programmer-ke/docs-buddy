@@ -1,14 +1,19 @@
 """Use case handlers, adapter interfaces"""
 
 import functools
+import logging
 from dataclasses import dataclass
-from typing import Protocol, Iterator, ContextManager, Callable
+from typing import Protocol, Iterator, ContextManager, Callable, TypeAlias
 from pathlib import Path
 
 from docs_buddy.common import PathLike, DocsBuddyError
 from docs_buddy import domain
 
 DEFAULT_MAX_RESULTS = 10
+
+log = logging.getLogger(__name__)
+
+Agent: TypeAlias = Callable[[domain.Query, list[Callable]], domain.QueryResponse]
 
 
 class RepositorySyncError(DocsBuddyError):
@@ -178,28 +183,18 @@ def index_document_chunks(
         pipeline.replace_destination(tmp_location)
 
 
-def search_index(
-    query: domain.Query, index: DocumentIndex, max_results: int = DEFAULT_MAX_RESULTS
-) -> list[domain.QueryResult]:
-    """Returns search results from the index"""
-    if max_results < 1:
-        raise SearchIndexError("max results must be at least 1")
-
-    return index.search(query, max_results)
-
-
 def find_answer(
     query: domain.Query,
-    index: DocumentIndex,
-    base_url: str | None = None,
+    research_query: Agent,
+    tools: list[Callable],
 ) -> domain.QueryResponse:
-    """Return the top search result as answer + citation.
+    """Uses the agent and tools to find an answer to the user query"""
 
-    If no results, returns an empty answer and citations list.
-    """
-    results = search_index(query, index, max_results=1)
-    if not results:
-        return domain.QueryResponse(answer="", citations=[])
-    top = results[0]
-    citation = f"{base_url}{top.path}" if base_url else top.path
-    return domain.QueryResponse(answer=top.content, citations=[citation])
+    try:
+        response = research_query(query, tools)
+    except DocsBuddyError as exc:
+        log.exception("Something went wrong, could not generate response")
+        msg = "Something went wrong, please try again."
+        response = domain.QueryResponse(msg, [])
+
+    return response

@@ -273,55 +273,53 @@ def test_can_index_documents() -> None:
     assert (action3, arg3_1, arg3_2) == ("MV", tmp_location, dest)
 
 
-def test_can_search_index() -> None:
-    # Given an index built from a fake pipeline
-    source = ".chunks/programmmer-ke/akash-docs-buddy"
-    dest = ".index/programmer-ke/akash-docs-buddy"
-    pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
-    index = adapters.FakeIndex(pipeline)
-    services.index_document_chunks(pipeline, index)
-
-    query = domain.Query(text="provider")
-
-    # When we search without a limit
-    results = services.search_index(query, index)
-    # Then we get at least one result
-    assert len(results) > 0
-
-    # When we request exactly one result
-    results = services.search_index(query, index, max_results=1)
-    # Then exactly one result is returned
-    assert len(results) == 1
-
-    # When max_results is <= 0, an error is raised
-    bad_values = [0, -1, -30]
-    for bad_value in bad_values:
-        with pytest.raises(services.SearchIndexError):
-            _ = services.search_index(query, index, max_results=bad_value)
-
-
-def test_find_answer_returns_top_chunk() -> None:
-    # Given an indexed document set with a known query matching
+def test_find_answer_with_configured_agent() -> None:
+    # Given the documentation index has been built
     source = ".chunks/test-repo"
     dest = ".index/test-repo"
     pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
     index = adapters.FakeIndex(pipeline)
     services.index_document_chunks(pipeline, index)
 
+    # And an agent has been configured with a search tool
+    tools = [adapters.make_search_tool(index)]
+    research_user_query = adapters.make_fake_research_agent(prompt="some prompt")
+
+    # When user submits valid query
     query = domain.Query("provider")
-    base_url = "https://github.com/test/docs/blob/main/"
+    response = services.find_answer(query, research_user_query, tools)
 
-    # When we retrieve an answer
-    response = services.find_answer(query, index, base_url)
-
-    # Then the response is a QueryResponse
+    # Then the system returns a structured response
     assert isinstance(response, domain.QueryResponse)
 
     # Then the answer is non‑empty
-    assert len(response.answer) > 0
+    assert response.answer
 
-    # Then there is exactly one citation
-    assert len(response.citations) == 1
+    # Then there is at least one citation
+    assert len(response.citations) > 0
 
-    # Then the citation starts with the provided base URL
-    assert response.citations[0].startswith(base_url)
+
+def test_agent_error_gracefully_handled() -> None:
+    # Given the documentation index has been built
+    source = ".chunks/test-repo"
+    dest = ".index/test-repo"
+    pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
+    index = adapters.FakeIndex(pipeline)
+    services.index_document_chunks(pipeline, index)
+
+    # And an agent has been configured with a search tool
+    tools = [adapters.make_search_tool(index)]
+    research_user_query = adapters.make_fake_research_agent(prompt="some prompt")
+
+    # When user submits query likely to fail
+    query = domain.Query("nonexistent")
+    response = services.find_answer(query, research_user_query, tools)
+
+    # Then the system returns a structured response
+    assert isinstance(response, domain.QueryResponse)
+
+    # Then the answer is non‑empty
+    assert "went wrong" in response.answer
+
+    # Then citation list is empty
+    assert len(response.citations) == 0

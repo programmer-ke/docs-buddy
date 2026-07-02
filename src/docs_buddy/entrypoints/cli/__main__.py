@@ -5,6 +5,7 @@ import os
 import argparse
 import logging
 import sys
+import textwrap
 
 from docs_buddy import adapters, services, domain
 from docs_buddy.services import commands
@@ -94,14 +95,23 @@ def main() -> None:
             sys.exit(1)
 
         base_url = f"https://github.com/{repo_id}/blob/main/"
-        response = services.find_answer(query, document_index, base_url)
-        if not response.answer:
-            print("No results found.")
-        else:
-            print(f"Answer: {response.answer}")
-            print("Citations:")
-            for citation in response.citations:
-                print(f"  - {citation}")
+
+        tools = [adapters.make_search_tool(document_index)]
+
+        system_prompt = textwrap.dedent("""\
+        You are a documentation assistant equipped to answer user queries
+        by searching the docs.
+        """)
+
+        research_user_query = adapters.make_openai_research_agent(system_prompt)
+
+        response = services.find_answer(query, research_user_query, tools)
+
+        print("Docs Buddy Response:\n")
+        print(response.answer)
+        print("\nReferences:\n")
+        for path in response.citations:
+            print(f"{base_url}{path}")
 
     else:
         parser.print_help()

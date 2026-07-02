@@ -10,30 +10,6 @@ Status legend:
 - [ ] address todo comments
 
 
-- [ ] **US-005: User can submit a query and receive an answer synthesized by an AI agent using the search tool**  
-  *As a user, I want to submit a query and receive an answer synthesized by an AI agent that uses the search tool to retrieve relevant chunks, so that I get a natural language answer grounded in the documentation.*  
-  - [ ] **Scenario 5.1:** AI agent returns answer with citations  
-    Given the documentation index has been built and contains indexed chunks  
-    And an AI agent is configured with the search tool  
-    When the user submits a valid query  
-    Then the system returns a structured response where:  
-      - The `answer` field contains a natural language answer synthesized by the agent  
-      - The `citations` field contains document URLs of chunks the agent selected  
-  - [ ] **Scenario 5.2:** AI agent decides no chunk is relevant  
-    Given the documentation index has been built and contains indexed chunks  
-    And an AI agent is configured with the search tool  
-    When the user submits a valid query  
-    And the agent decides none of the returned chunks are relevant  
-    Then the system returns a structured response where:  
-      - The `answer` field contains a message like "I could not find relevant information in the documentation."  
-      - The `citations` field is an empty list  
-  - [ ] **Scenario 5.3:** Search returns zero chunks  
-    Given the documentation index has been built but contains no chunks matching the query  
-    And an AI agent is configured with the search tool  
-    When the user submits a valid query  
-    Then the system returns a structured response where:  
-      - The `answer` field contains a message like "I could not find relevant information in the documentation."  
-      - The `citations` field is an empty list
 
 - [ ] **US-006: Operator can observe query and result logs**  
   *As an operator, I want to see logs of each query submitted and the corresponding result (answer + citations), so that I can monitor usage, debug issues, and audit the system.*  
@@ -73,6 +49,34 @@ Status legend:
 
 ## in progress
 
+- [>] **US-005: User can submit a query and receive an answer
+  synthesized by an AI agent using the search tool*
+  *As a user, I want to submit a query and receive an answer
+  synthesized by an AI agent that uses the search tool to retrieve
+  relevant chunks, so that I get a natural language answer grounded in
+  the documentation.*
+  - [x] **Scenario 5.1:** AI agent returns answer with citations  
+    Given the documentation index has been built and contains indexed chunks  
+    And an AI agent is configured with the search tool  
+    When the user submits a valid query  
+    Then the system returns a structured response where:  
+      - The `answer` field contains a natural language answer synthesized by the agent  
+      - The `citations` field contains document URLs of chunks the agent selected  
+  - [x] **Scenario 5.2:** AI agent decides no chunk is relevant  
+    Given the documentation index has been built and contains indexed chunks  
+    And an AI agent is configured with the search tool  
+    When the user submits a valid query  
+    And the agent decides none of the returned chunks are relevant  
+    Then the system returns a structured response where:  
+      - The `answer` field contains a message like "I could not find relevant information in the documentation."  
+      - The `citations` field is an empty list  
+  - [x] **Scenario 5.3:** Search returns zero chunks  
+    Given the documentation index has been built but contains no chunks matching the query  
+    And an AI agent is configured with the search tool  
+    When the user submits a valid query  
+    Then the system returns a structured response where:  
+      - The `answer` field contains a message like "I could not find relevant information in the documentation."  
+      - The `citations` field is an empty list
 
 ## done
 
