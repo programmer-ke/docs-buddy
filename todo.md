@@ -11,17 +11,6 @@ Status legend:
 
 
 
-- [ ] **US-006: Operator can observe query and result logs**  
-  *As an operator, I want to see logs of each query submitted and the corresponding result (answer + citations), so that I can monitor usage, debug issues, and audit the system.*  
-  - [ ] **Scenario 6.1:** Query logged on success  
-    Given the system is running  
-    When a user submits a valid query and receives a successful response  
-    Then the system logs: the query text, the answer, and the list of citations  
-  - [ ] **Scenario 6.2:** Query logged on error  
-    Given the system is running  
-    When a user submits a query and receives an error response (e.g., validation error)  
-    Then the system logs: the query text and the error message
-
 - [ ] **US-007: User can submit a query via CLI and receive a structured response**  
   *As a user, I want to submit a query via the CLI and receive the structured response (answer + citations) printed to the console, so that I can use the system from the command line.*  
   - [ ] **Scenario 7.1:** CLI query returns answer and citations  
@@ -58,7 +47,21 @@ Status legend:
 
 ## in progress
 
-- [>] **US-005: User can submit a query and receive an answer
+- [>] **US-006: Operator can observe query and result logs**  
+  *As an operator, I want to see logs of each query submitted and the corresponding result (answer + citations), so that I can monitor usage, debug issues, and audit the system.*  
+  - [ ] **Scenario 6.1:** Query logged on success  
+    Given the system is running  
+    When a user submits a valid query and receives a successful response  
+    Then the system logs: the query text, the answer, and the list of citations  
+  - [ ] **Scenario 6.2:** Query logged on error  
+    Given the system is running  
+    When a user submits a query and receives an error response (e.g., validation error)  
+    Then the system logs: the query text and the error message
+
+
+## done
+
+- [x] **US-005: User can submit a query and receive an answer
   synthesized by an AI agent using the search tool*
   *As a user, I want to submit a query and receive an answer
   synthesized by an AI agent that uses the search tool to retrieve
@@ -86,9 +89,6 @@ Status legend:
     Then the system returns a structured response where:  
       - The `answer` field contains a message like "I could not find relevant information in the documentation."  
       - The `citations` field is an empty list
-
-## done
-
 - [x] **US-004: User can submit a query and receive a real answer from the document index (no AI agent yet)**  
   *As a user, I want to submit a query and receive an answer synthesized from the document index using a simple deterministic strategy (e.g., return the top chunk text as the answer), so that I can validate the search and retrieval pipeline end-to-end.*  
   - [x] **Scenario 4.1:** Query returns top chunk as answer  
