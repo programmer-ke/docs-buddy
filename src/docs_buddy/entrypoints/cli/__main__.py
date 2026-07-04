@@ -103,7 +103,11 @@ def main() -> None:
         by searching the docs.
         """)
 
-        research_user_query = adapters.make_openai_research_agent(system_prompt)
+        try:
+            research_user_query = adapters.make_openai_research_agent(system_prompt)
+        except adapters.AgentError:
+            log.exception("Something went wrong while configuring the agent")
+            sys.exit(1)
 
         response = services.find_answer(query, research_user_query, tools)
 
