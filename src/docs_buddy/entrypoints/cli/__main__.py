@@ -11,13 +11,15 @@ from docs_buddy import adapters, services, domain
 from docs_buddy.services import commands
 from docs_buddy.entrypoints import bootstrap
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
 log = logging.getLogger(__name__)
+
+
+def _configure_logging(log_level: int) -> None:
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
 
 def _get_data_dir() -> Path:
@@ -43,6 +45,13 @@ def main() -> None:
         help="Repository ID(s). Can be used multiple times, each time for a different ID",
     )
 
+    parser.add_argument(
+        "--log-level",
+        default="WARNING",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="The log level to use",
+    )
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--update-sources",
@@ -57,6 +66,9 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    log_level = getattr(logging, args.log_level)
+    _configure_logging(log_level)
 
     # Require at least one repository ID
     if not args.repo_ids:

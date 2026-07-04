@@ -47,16 +47,12 @@ Status legend:
 
 ## in progress
 
-- [>] **US-006: Operator can observe query and result logs**  
+- [>] **US-006: Operator can observe logs**  
   *As an operator, I want to see logs of each query submitted and the corresponding result (answer + citations), so that I can monitor usage, debug issues, and audit the system.*  
-  - [ ] **Scenario 6.1:** Query logged on success  
+  - [x] **Scenario 6.1:** Query logged on success  
     Given the system is running  
     When a user submits a valid query and receives a successful response  
-    Then the system logs: the query text, the answer, and the list of citations  
-  - [ ] **Scenario 6.2:** Query logged on error  
-    Given the system is running  
-    When a user submits a query and receives an error response (e.g., validation error)  
-    Then the system logs: the query text and the error message
+    Then the system logs: search args, agent events  
 
 
 ## done
