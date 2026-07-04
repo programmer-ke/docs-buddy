@@ -6,6 +6,8 @@ Should not have any local imports
 import datetime
 import os
 from typing import TypeAlias
+import logging
+import functools
 
 PathLike: TypeAlias = str | os.PathLike
 
@@ -27,3 +29,19 @@ def json_datetime_handler(obj):
     if isinstance(obj, datetime.time):
         return obj.isoformat()
     raise TypeError(f"Type {type(obj)} not JSON serializable")
+
+
+def log_input(logger, log_level):
+    """Creates a decorator that logs function input at the given log level"""
+
+    def decorator(func):
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            msg = "%s called with args: %s and kwargs: %s"
+            logger.log(log_level, msg, func.__name__, args, kwargs)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

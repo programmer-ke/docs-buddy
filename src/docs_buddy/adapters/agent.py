@@ -5,12 +5,15 @@ import json
 from typing import Callable
 import textwrap
 import os
+import logging
 
 import openai
 import agents
 
 from docs_buddy import domain, services
-from docs_buddy.common import DocsBuddyError
+from docs_buddy.common import DocsBuddyError, log_input
+
+log = logging.getLogger(__name__)
 
 
 class AgentError(DocsBuddyError):
@@ -21,9 +24,66 @@ class ToolError(DocsBuddyError):
     pass
 
 
+class LoggingHooks(agents.RunHooks):
+    """Defines logging hooks for the openai agent"""
+
+    async def on_agent_start(self, context, agent):
+        log.info(
+            "agent started: %s, input tokens: %s, output tokens: %s",
+            agent.name,
+            context.usage.input_tokens,
+            context.usage.output_tokens,
+        )
+
+    async def on_llm_end(self, context, agent, response):
+        log.info(
+            "llm ended: agent %s, output length: %s, input tokens: %s, output tokens: %s",
+            agent.name,
+            len(response.output),
+            context.usage.input_tokens,
+            context.usage.output_tokens,
+        )
+
+    async def on_llm_start(self, context, agent, system_prompt, input_items):
+        log.info(
+            "llm started: agent %s, input tokens: %s, output tokens: %s, inputs length %s",
+            agent.name,
+            context.usage.input_tokens,
+            context.usage.output_tokens,
+            len(input_items),
+        )
+
+    async def on_agent_end(self, context, agent, output):
+        log.info(
+            "agent %s ended: input tokens: %s, output tokens: %s",
+            agent.name,
+            context.usage.input_tokens,
+            context.usage.output_tokens,
+        )
+
+    async def on_tool_start(self, context, agent, tool):
+        log.info(
+            "tool %s started: agent %s, input tokens: %s, output tokens: %s",
+            tool.name,
+            agent.name,
+            context.usage.input_tokens,
+            context.usage.output_tokens,
+        )
+
+    async def on_tool_end(self, context, agent, tool, result):
+        log.info(
+            "tool %s ended: agent %s, input tokens: %s, output tokens: %s",
+            tool.name,
+            agent.name,
+            context.usage.input_tokens,
+            context.usage.output_tokens,
+        )
+
+
 def make_search_tool(index: services.DocumentIndex) -> Callable:
     """Creates a search tool over the index"""
 
+    @log_input(log, logging.INFO)
     def search_document_index(phrase: str, max_results: int = 5) -> list[str]:
         """Search the document index for the given phrase
 
@@ -144,6 +204,7 @@ def make_openai_research_agent(prompt: str) -> services.Agent:
             run_agent(
                 agent,
                 str(query),
+                LoggingHooks(),
                 agents.RunConfig(model_provider=CUSTOM_MODEL_PROVIDER),
             )
         )
@@ -159,7 +220,7 @@ def make_openai_research_agent(prompt: str) -> services.Agent:
 
 
 async def run_agent(
-    agent: agents.Agent, query: str, config: agents.RunConfig
+    agent: agents.Agent, query: str, hooks: agents.RunHooks, config: agents.RunConfig
 ) -> agents.RunResult:
     """Run agent in event loop"""
-    return await agents.Runner.run(agent, query, run_config=config)
+    return await agents.Runner.run(agent, query, hooks=hooks, run_config=config)
