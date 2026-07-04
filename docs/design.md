@@ -2,6 +2,8 @@
 
 ## Repository Structure
 
+It matches the domain driven design architecture of the application
+
 ### Main package
 
 The package is rooted at `src/docs_buddy`.
@@ -18,11 +20,14 @@ Use case handlers, adapter interfaces, events and commands
 
 #### adapters
 
-Infrastructure-level implementations
+Infrastructure-level abstractions
 
 #### entrypoints
 
 This is the presentation layer exposed to the external world.
+
+Bootstrapping happens here where the appropriate dependencies are
+injected, event and command handlers registered by the message bus.
 
 ### Tests
 

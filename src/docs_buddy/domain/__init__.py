@@ -82,7 +82,7 @@ class Query:
 
 @dataclass(frozen=True)
 class QueryResult:
-    """Result of a user query"""
+    """Result of an index query"""
 
     content: str
     path: str
@@ -90,6 +90,27 @@ class QueryResult:
 
     def __str__(self):
         return json.dumps(asdict(self))
+
+
+@dataclass(frozen=True)
+class QueryResponse:
+    """Structured response for a user query"""
+
+    answer: str
+    citations: list[str]
+
+    def __str__(self):
+        return json.dumps(asdict(self))
+
+    def __repr__(self):
+        cls_name = type(self).__name__
+        return f"{cls_name}({self.answer!r}, {self.citations!r})"
+
+    @classmethod
+    def fromstring(cls, text: str) -> "QueryResponse":
+        # todo: factor out json serialization
+        dict_ = json.loads(text)
+        return cls(**dict_)
 
 
 def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:

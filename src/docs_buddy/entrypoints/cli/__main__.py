@@ -5,6 +5,7 @@ import os
 import argparse
 import logging
 import sys
+import textwrap
 
 from docs_buddy import adapters, services, domain
 from docs_buddy.services import commands
@@ -15,6 +16,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+log = logging.getLogger(__name__)
 
 
 def _get_data_dir() -> Path:
@@ -75,33 +78,44 @@ def main() -> None:
             message_bus.send(sync_repo_command)
 
     elif args.query:
-        # Use the first repo ID for search (multi-repo search not yet implemented)
+        # todo: Use the first repo ID for search (multi-repo search not yet implemented)
         repo_id = args.repo_ids[0]
-        if len(args.repo_ids) > 1:
-            print(
-                "Warning: multiple --repo-id given, searching only in repository:",
-                repo_id,
-            )
 
         index_path = data_dir / "whoosh" / repo_id
         if not index_path.exists():
-            print(f"No index found for {repo_id}. Run --update-sources first.")
+            log.error("No index found for %s. Run --update-sources first", repo_id)
             sys.exit(1)
 
         document_index = adapters.WhooshDocumentIndex(index_location=index_path)
-        query = domain.Query(args.query)
 
-        results = services.search_index(query, document_index, max_results=5)
+        try:
+            query = domain.Query(args.query)
+        except domain.InvalidQueryError as exc:
+            log.error("Invalid query detected: %s", exc)
+            sys.exit(1)
 
-        if not results:
-            print("No results found.")
-        else:
-            for i, result in enumerate(results, start=1):
-                print("\nSearch Result:", i)
-                print("*" * 7)
-                print("Content:", result.content)
-                print("Path:", result.path)
-                print("Metadata:", result.metadata)
+        base_url = f"https://github.com/{repo_id}/blob/main/"
+
+        tools = [adapters.make_search_tool(document_index)]
+
+        system_prompt = textwrap.dedent("""\
+        You are a documentation assistant equipped to answer user queries
+        by searching the docs.
+        """)
+
+        try:
+            research_user_query = adapters.make_openai_research_agent(system_prompt)
+        except adapters.AgentError:
+            log.exception("Something went wrong while configuring the agent")
+            sys.exit(1)
+
+        response = services.find_answer(query, research_user_query, tools)
+
+        print("Docs Buddy Response:\n")
+        print(response.answer)
+        print("\nReferences:\n")
+        for path in response.citations:
+            print(f"{base_url}{path}")
 
     else:
         parser.print_help()

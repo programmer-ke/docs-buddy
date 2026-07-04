@@ -16,6 +16,7 @@ from docs_buddy.common import PathLike, DocsBuddyError
 from docs_buddy import domain, services
 from docs_buddy.services import events, commands
 from .whoosh_index import WhooshDocumentIndex, WhooshIndexError
+from .agent import *
 
 log = logging.getLogger(__name__)
 

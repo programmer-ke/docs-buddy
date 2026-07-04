@@ -8,7 +8,7 @@ import json
 import pytest
 import whoosh.index
 
-from docs_buddy import adapters, domain, common
+from docs_buddy import adapters, domain, common, services
 
 
 def test_get_temp_location_creates_and_cleans_up() -> None:
@@ -144,6 +144,36 @@ def test_can_search_whoosh_index() -> None:
 
         # it should be possible to specify max length of results
         assert len(document_index.search(query, max_results=1)) == 1
+
+
+def test_can_create_whoosh_search_tool() -> None:
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        indexer = adapters.WhooshDocumentIndex()
+
+        chunks = [
+            domain.DocumentChunk.fromstring(json.dumps(_SAMPLE_CHUNK_1)),
+            domain.DocumentChunk.fromstring(json.dumps(_SAMPLE_CHUNK_2)),
+        ]
+
+        indexer.fit(iter(chunks), temp_dir)
+
+        document_index = adapters.WhooshDocumentIndex(temp_dir)
+
+        search = adapters.make_search_tool(document_index)
+
+        search_phrase = "providers"
+        results = search(search_phrase)
+        assert len(results) > 1
+
+        for result in results:
+            # assert required keys in json string
+            d = json.loads(result)
+            assert all(k in d for k in ["content", "path", "metadata"])
+
+        # it should be possible to specify max length of results
+        assert len(search(search_phrase, max_results=1)) == 1
 
 
 def test_whoosh_document_index_fitting_for_empty_documents() -> None:
