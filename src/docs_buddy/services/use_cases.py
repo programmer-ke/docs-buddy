@@ -192,7 +192,7 @@ def find_answer(
 
     try:
         response = research_query(query, tools)
-    except DocsBuddyError as exc:
+    except Exception as exc:
         log.exception("Something went wrong, could not generate response")
         msg = "Something went wrong, please try again."
         response = domain.QueryResponse(msg, [])
