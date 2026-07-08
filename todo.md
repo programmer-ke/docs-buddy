@@ -47,16 +47,15 @@ Status legend:
 
 ## in progress
 
-- [>] **US-006: Operator can observe logs**  
+
+## done
+
+- [x] **US-006: Operator can observe logs**  
   *As an operator, I want to see logs of each query submitted and the corresponding result (answer + citations), so that I can monitor usage, debug issues, and audit the system.*  
   - [x] **Scenario 6.1:** Query logged on success  
     Given the system is running  
     When a user submits a valid query and receives a successful response  
     Then the system logs: search args, agent events  
-
-
-## done
-
 - [x] **US-005: User can submit a query and receive an answer
   synthesized by an AI agent using the search tool*
   *As a user, I want to submit a query and receive an answer
