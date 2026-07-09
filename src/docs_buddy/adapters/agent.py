@@ -80,8 +80,17 @@ class LoggingHooks(agents.RunHooks):
         )
 
 
-def make_search_tool(index: services.DocumentIndex) -> Callable:
-    """Creates a search tool over the index"""
+def make_search_tool(
+    index: services.DocumentIndex, tool_id: str, content_information: str
+) -> Callable:
+    """Creates a search tool over the index
+
+    @arg index - the index to search over
+    @arg tool_id - the unique identifier used to create the tool name
+    @arg content_information - a description of content the tool searches
+
+    @returns - a search tool over the index
+    """
 
     @log_input(log, logging.INFO)
     def search_document_index(phrase: str, max_results: int = 5) -> list[str]:
@@ -95,6 +104,10 @@ def make_search_tool(index: services.DocumentIndex) -> Callable:
           list[str]: A list of JSON formatted strings representing the
                      the results. Each result has associated content,
                      path and metadata fields
+
+        What is indexed:
+
+        {content_information}
         """
 
         if not max_results > 0:
@@ -105,6 +118,12 @@ def make_search_tool(index: services.DocumentIndex) -> Callable:
         query = domain.Query(phrase)
         results = index.search(query, max_results)
         return [str(r) for r in results]
+
+    search_document_index.__doc__ = search_document_index.__doc__.format(
+        content_information=content_information
+    )
+
+    search_document_index.__name__ = search_document_index.__name__ + f"_{tool_id}"
 
     return search_document_index
 
@@ -152,28 +171,26 @@ def generate_final_response(
     return final_response
 
 
-def make_openai_research_agent(prompt: str) -> services.Agent:
+def make_openai_research_agent(
+    prompt: str, model_name: str, base_url: str
+) -> services.Agent:
     """Creates an openai agent"""
 
-    BASE_URL = os.getenv("OPENAI_BASE_URL") or ""
-    API_KEY = os.getenv("OPENAI_API_KEY") or ""
-    MODEL_NAME = os.getenv("DOCS_BUDDY_MODEL_NAME") or ""
+    api_key = os.getenv("OPENAI_API_KEY")
 
-    if not BASE_URL or not API_KEY or not MODEL_NAME:
-        raise AgentError(
-            "Please set OPENAI_BASE_URL, OPENAI_API_KEY, DOCS_BUDDY_MODEL_NAME"
-        )
+    if not api_key:
+        raise AgentError("Please set the OPENAI_API_KEY environment variable")
 
-    client = openai.AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
+    client = openai.AsyncOpenAI(base_url=base_url, api_key=api_key)
     agents.set_tracing_disabled(disabled=True)
 
     class CustomModelProvider(agents.ModelProvider):
-        def get_model(self, model_name: str | None) -> agents.Model:
+        def get_model(self, name: str | None) -> agents.Model:
             return agents.OpenAIChatCompletionsModel(
-                model=model_name or MODEL_NAME, openai_client=client
+                model=name or model_name, openai_client=client
             )
 
-    CUSTOM_MODEL_PROVIDER = CustomModelProvider()
+    custom_model_provider = CustomModelProvider()
 
     def openai_agent(
         query: domain.Query, tools: list[Callable]
@@ -205,7 +222,7 @@ def make_openai_research_agent(prompt: str) -> services.Agent:
                 agent,
                 str(query),
                 LoggingHooks(),
-                agents.RunConfig(model_provider=CUSTOM_MODEL_PROVIDER),
+                agents.RunConfig(model_provider=custom_model_provider),
             )
         )
 

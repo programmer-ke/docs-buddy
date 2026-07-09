@@ -17,6 +17,7 @@ def get_message_bus(
     repository_storage_path: PathLike,
     chunks_storage_path: PathLike,
     lexical_index_storage_path: PathLike,
+    doc_extensions: tuple[str, ...],
 ) -> handlers.MessageBus:
     """Create and configure the application message bus with all dependencies.
 
@@ -31,7 +32,7 @@ def get_message_bus(
     message_bus = adapters.InMemoryMessageBus()
     repo_storage = adapters.FileSystemRepoStorage(repository_storage_path)
     docs_storage = adapters.FileSystemDocsStorage(
-        repository_storage_path, chunks_storage_path
+        repository_storage_path, chunks_storage_path, doc_extensions
     )
     chunks_pipeline = adapters.FileSystemDocumentChunksPipeline(
         chunks_storage_path, lexical_index_storage_path

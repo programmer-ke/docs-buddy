@@ -12,6 +12,7 @@ class RepositorySynced(Event):
     """Indicate that repository has been synced"""
 
     url: str
+    branch: str
 
 
 @dataclass(frozen=True)

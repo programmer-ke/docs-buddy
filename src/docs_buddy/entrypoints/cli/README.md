@@ -6,15 +6,20 @@ from the terminal.
 ## Usage
 
 ```bash
-usage: python -m docs_buddy.entrypoints.cli [-h] [--repo-id REPO_IDS] [--update-sources | query]
+usage: __main__.py [-h] [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [--update-sources] [--init]
+                   [--current-config]
+                   [query]
 
 Docs Buddy CLI
 
 positional arguments:
-  query               Query string to search the documentation
+  query                 Query string to search the documentation
 
 options:
-  -h, --help          show this help message and exit
-  --repo-id REPO_IDS  Repository ID(s). Can be used multiple times, each time for a different ID
-  --update-sources    Update document sources from repository and recreate index
+  -h, --help            show this help message and exit
+  --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        The log level to use (default WARNING)
+  --update-sources      Update document sources from repository and recreate index
+  --init                Create a .docs_buddy.yaml config file from template in the current directory
+  --current-config      Show location of the current config file in use
 ```

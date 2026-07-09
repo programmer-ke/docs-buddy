@@ -27,11 +27,14 @@ class WhooshDocumentIndex:
     )
     _SEARCH_FIELDS = ["content", "metadata", "path_keywords"]
 
-    def __init__(self, index_location: PathLike | None = None):
+    def __init__(
+        self, index_location: PathLike | None = None, file_prefix: str | None = None
+    ):
         """
         Initialize a Whoosh document index.
 
         """
+        self._file_prefix = file_prefix
         self._index = None
         if index_location:
             self._index = index.open_dir(index_location)
@@ -83,6 +86,15 @@ class WhooshDocumentIndex:
 
         parsed_query = self._query_parser.parse(str(query))
 
+        prefix = ""
+
+        if self._file_prefix:
+            prefix = (
+                self._file_prefix + "/"
+                if not self._file_prefix.endswith("/")
+                else self._file_prefix
+            )
+
         with self._index.searcher() as searcher:
             # todo: consider interaction between indexing and searching
             # is locking required for coordination?
@@ -90,9 +102,10 @@ class WhooshDocumentIndex:
             results = [
                 domain.QueryResult(
                     content=r["content"],
-                    path=r["path"],
+                    path=prefix + r["path"],
                     metadata=json.loads(r["metadata"]),
                 )
                 for r in results
             ]
+
         return results

@@ -11,3 +11,4 @@ __pycache__
 .whoosh
 
 bin/
+.docs_buddy.yaml

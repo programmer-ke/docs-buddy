@@ -25,6 +25,10 @@ class MemoryBusError(DocsBuddyError):
     pass
 
 
+class FileSystemRepoStorageError(DocsBuddyError):
+    pass
+
+
 class InMemoryMessageBus:
     """In memory implementation of the message bus protocol"""
 
@@ -75,10 +79,11 @@ class FakeRepoStorage:
     def can_clone(self) -> bool:
         return self.fake_can_clone
 
-    def clone_repo(self, url: str) -> None:
-        self.actions.append(("CLONE", url, self._target))
+    def clone_repo(self, url: str, branch: str) -> None:
+        self.actions.append(("CLONE", url, self._target, branch))
 
-    def pull_repo(self):
+    def pull_repo(self, branch: str) -> None:
+        self.actions.append(("CHECKOUT", branch))
         self.actions.append(("PULL",))
 
 
@@ -95,11 +100,19 @@ class FileSystemRepoStorage:
     def is_already_cloned(self) -> bool:
         return self._is_git_repository(self._target)
 
-    def pull_repo(self):
-        self._update_repository(self._target)
+    def pull_repo(self, branch: str) -> None:
+        try:
+            self._update_repository(self._target, branch)
+        except subprocess.CalledProcessError as exc:
+            msg = f"Unable to pull branch '{branch}'. Error: '{exc.stderr}'"
+            raise FileSystemRepoStorageError(msg) from exc
 
-    def clone_repo(self, url: str) -> None:
-        self._clone_repository(url, self._target)
+    def clone_repo(self, url: str, branch: str) -> None:
+        try:
+            self._clone_repository(url, self._target, branch)
+        except subprocess.CalledProcessError as exc:
+            msg = f"Unable to clone repository '{url}'. Error: '{exc.stderr}'"
+            raise FileSystemRepoStorageError(msg) from exc
 
     def can_clone(self):
         """Indicates whether we can clone a new repo in the target
@@ -123,18 +136,37 @@ class FileSystemRepoStorage:
         return git_dir.exists() and git_dir.is_dir()
 
     @staticmethod
-    def _clone_repository(url: str, target_dir: str) -> None:
+    def _clone_repository(url: str, target_dir: str, branch: str) -> None:
         """Clone a git repository with depth 1."""
         subprocess.run(
-            ["git", "clone", "--depth", "1", url, target_dir],
+            ["git", "clone", "--depth", "1", "--branch", branch, url, target_dir],
             check=True,
             capture_output=True,
         )
 
     @staticmethod
-    def _update_repository(directory: str) -> None:
+    def _update_repository(directory: str, branch: str) -> None:
         """Pull latest changes from a git repository."""
-        subprocess.run(["git", "pull"], cwd=directory, check=True, capture_output=True)
+        subprocess.run(
+            [
+                "git",
+                "fetch",
+                "--depth",
+                "1",
+                "origin",
+                f"{branch}:refs/remotes/origin/{branch}",
+            ],
+            cwd=directory,
+            check=True,
+            capture_output=True,
+        )
+
+        subprocess.run(
+            ["git", "checkout", "-B", branch, f"origin/{branch}"],
+            cwd=directory,
+            capture_output=True,
+            check=True,
+        )
 
 
 class FakeIntermediateStorage:
