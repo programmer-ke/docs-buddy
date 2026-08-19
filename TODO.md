@@ -9,6 +9,7 @@ Status legend:
 
 - [ ] address todo comments
 
+- [ ] Use runtime validation for message attributes
 
 - [ ] **US-008: User can submit a query via web form and receive a structured response**  
   *As a user, I want to submit a query via a web form and receive the structured response (answer + citations) rendered in the browser, so that I can use the system from a web interface.*  
