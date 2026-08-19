@@ -142,14 +142,15 @@ class FileSystemRepoStorage:
             ["git", "clone", "--depth", "1", "--branch", branch, url, target_dir],
             check=True,
             capture_output=True,
+            text=True,
         )
 
     @staticmethod
     def _update_repository(directory: str, branch: str) -> None:
         """Pull latest changes from a git repository
 
-        This is a forced update that will update the local
-        to match remote.
+        This is a forced update that will make the local
+        match the remote.
         """
         subprocess.run(
             [
@@ -163,6 +164,7 @@ class FileSystemRepoStorage:
             cwd=directory,
             check=True,
             capture_output=True,
+            text=True,
         )
 
         subprocess.run(
@@ -170,6 +172,7 @@ class FileSystemRepoStorage:
             cwd=directory,
             capture_output=True,
             check=True,
+            text=True,
         )
 
 
