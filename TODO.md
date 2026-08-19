@@ -26,9 +26,11 @@ Status legend:
 
 ## in progress
 
-- [>] **US-007: User can submit a query via CLI and receive a structured response**  
+## done
+
+- [x] **US-007: User can submit a query via CLI and receive a structured response**  
   *As a user, I want to submit a query via the CLI and receive the structured response (answer + citations) printed to the console, so that I can use the system from the command line.*  
-  - [>] **Scenario 7.1:** CLI query returns answer and citations  
+  - [x] **Scenario 7.1:** CLI query returns answer and citations  
     Given the documentation index has been built  
     And the AI agent is configured  
     When the user runs `docs-buddy query "What is X?"`  
@@ -42,12 +44,10 @@ Status legend:
 		  - add a flag to show user the config file used for current invocation
 		  - Add a flag to create config file from template in current location
 	
-  - [ ] **Scenario 7.2:** CLI query returns error message  
+  - [x] **Scenario 7.2:** CLI query returns error message  
     Given the documentation index has not been built  
     When the user runs `docs-buddy query "What is X?"`  
     Then the CLI prints the error message: "Documentation index is not available. Please sync a repository first."
-
-## done
 
 - [x] **US-006: Operator can observe logs**  
   *As an operator, I want to see logs of each query submitted and the corresponding result (answer + citations), so that I can monitor usage, debug issues, and audit the system.*  
