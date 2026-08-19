@@ -137,10 +137,15 @@ def test_can_search_whoosh_index() -> None:
 
         indexer.fit(iter(chunks), temp_dir)
 
-        document_index = adapters.WhooshDocumentIndex(temp_dir)
+        file_prefix = "https://github.com/akash-network/website/blob/main"
+
+        document_index = adapters.WhooshDocumentIndex(temp_dir, file_prefix)
         query = domain.Query("providers")
         results = document_index.search(query, max_results=10)
         assert len(results) > 1
+
+        # prefix is prepended to result paths
+        assert all([r.path.startswith(file_prefix) for r in results])
 
         # it should be possible to specify max length of results
         assert len(document_index.search(query, max_results=1)) == 1
@@ -161,7 +166,9 @@ def test_can_create_whoosh_search_tool() -> None:
 
         document_index = adapters.WhooshDocumentIndex(temp_dir)
 
-        search = adapters.make_search_tool(document_index)
+        search = adapters.make_search_tool(
+            document_index, "foo_docs", "Foo documentation"
+        )
 
         search_phrase = "providers"
         results = search(search_phrase)

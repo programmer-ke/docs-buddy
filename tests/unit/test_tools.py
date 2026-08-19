@@ -10,7 +10,17 @@ def test_can_create_search_tool_over_index() -> None:
     index = adapters.FakeIndex(pipeline)
     services.index_document_chunks(pipeline, index)
 
-    search_index_tool = adapters.make_search_tool(index)
+    repo_description = "The foo website documentation in markdown"
+    tool_id = "github_com_programmer_ke_docs_buddy"
+    search_index_tool = adapters.make_search_tool(index, tool_id, repo_description)
+
+    # when we check description, it contains the repo information
+    tool_doc = search_index_tool.__doc__
+    assert tool_doc and repo_description in tool_doc
+
+    # when we check the tool name, it contains the tool id
+    assert tool_id in search_index_tool.__name__
+
     phrase = "provider"
 
     # When we search without a limit

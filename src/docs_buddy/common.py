@@ -8,6 +8,7 @@ import os
 from typing import TypeAlias
 import logging
 import functools
+import re
 
 PathLike: TypeAlias = str | os.PathLike
 
@@ -45,3 +46,11 @@ def log_input(logger, log_level):
         return wrapper
 
     return decorator
+
+
+def sanitize_to_python_id(identifier: str) -> str:
+    """Converts string to valid Python identifier"""
+    sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", identifier)
+    if sanitized[0].isdigit():
+        sanitized = "name_" + sanitized
+    return sanitized

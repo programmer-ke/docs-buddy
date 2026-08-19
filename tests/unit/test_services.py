@@ -14,14 +14,17 @@ def test_syncing_existing_repository() -> None:
     storage = adapters.FakeRepoStorage(location)
     storage.fake_is_cloned = True
     github_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
+    branch = "trunk"
 
     # When we synchronise
-    services.sync_repository(github_url, storage)
+    services.sync_repository(github_url, branch, storage)
 
     # Then a pull is performed
-    assert len(storage.actions) == 1
-    [(action,)] = storage.actions
-    assert action == "PULL"
+    assert len(storage.actions) == 2
+    [(cmd0, arg0), (cmd1,)] = storage.actions
+    assert cmd0 == "CHECKOUT"
+    assert arg0 == branch
+    assert cmd1 == "PULL"
 
 
 def test_syncing_non_existent_repo_and_can_clone() -> None:
@@ -31,16 +34,18 @@ def test_syncing_non_existent_repo_and_can_clone() -> None:
     storage.fake_is_cloned = False
     storage.fake_can_clone = True
     github_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
+    branch = "trunk"
 
     # When we synchronise
-    services.sync_repository(github_url, storage)
+    services.sync_repository(github_url, branch, storage)
 
     # Then a clone is performed with the correct URL and target
     assert len(storage.actions) == 1
-    [(action, url, target)] = storage.actions
+    [(action, url, target, actual_branch)] = storage.actions
     assert action == "CLONE"
     assert url == github_url
     assert target == location
+    assert branch == actual_branch
 
 
 def test_syncing_non_existent_repo_and_cannot_clone() -> None:
@@ -50,11 +55,12 @@ def test_syncing_non_existent_repo_and_cannot_clone() -> None:
     storage.fake_is_cloned = False
     storage.fake_can_clone = False
     github_url = "https://github.com/programmer-ke/akash-docs-buddy.git"
+    branch = "master"
 
     # When we try to synchronise
     # Then a RepositorySyncError is raised
     with pytest.raises(services.RepositorySyncError):
-        services.sync_repository(github_url, storage)
+        services.sync_repository(github_url, branch, storage)
 
     # And no storage action was recorded
     assert len(storage.actions) == 0
@@ -282,7 +288,7 @@ def test_find_answer_with_configured_agent() -> None:
     services.index_document_chunks(pipeline, index)
 
     # And an agent has been configured with a search tool
-    tools = [adapters.make_search_tool(index)]
+    tools = [adapters.make_search_tool(index, "foo_docs", "Foo documentation")]
     research_user_query = adapters.make_fake_research_agent(prompt="some prompt")
 
     # When user submits valid query
@@ -308,7 +314,7 @@ def test_agent_error_gracefully_handled() -> None:
     services.index_document_chunks(pipeline, index)
 
     # And an agent has been configured with a search tool
-    tools = [adapters.make_search_tool(index)]
+    tools = [adapters.make_search_tool(index, "foo_docs", "Foo documentation")]
     research_user_query = adapters.make_fake_research_agent(prompt="some prompt")
 
     # When user submits query likely to fail

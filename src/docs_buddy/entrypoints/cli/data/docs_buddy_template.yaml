@@ -1,0 +1,51 @@
+---
+model_name: "deepseek/deepseek-v4-flash"  # model to use from selected provider
+openai_base_url: "https://openrouter.ai/api/v1"  # supports any provider with an openai compatible API
+
+# tweak system prompt to preference
+system_prompt: >-
+  You are a documentation assistant equipped to answer user queries
+  by searching the documentation sources provided.
+
+repositories:
+  # One or more git repositories to clone
+  
+  # Github example:
+  #  
+  # repo_url - the https URL to clone
+  # branch - the branch to clone master, main, trunk etc..
+  # formatted_file_prefix - the prefix to each file in the repo loading its formatted version
+  # repo_content_description - Description of the repo's content
+  # file_extensions - list of extensions of files to select for search (Default if not specified: md, mdx)
+  
+  # Replace bracketed text with the correct values
+  - repo_url: "https://github.com/{owner}/{repo}.git"
+    branch: "main"
+    formatted_file_prefix: "https://github.com/{owner}/{repo}/blob/main"
+    repo_content_description: "API documentation for foo project"
+    file_extensions:
+      - md
+      - mdx
+  
+  # Gitlab example
+  
+  #- repo_url: "https://gitlab.com/{owner}/{repo}.git"
+  #  branch: "master"
+  #  formatted_file_prefix: "https://gitlab.com/{owner}/{repo}/-/blob/{branch}"
+  #  repo_content_description: "API documentation for foo project"
+  
+  # Gitea example
+  
+  #- repo_url: "https://gitea.com/{owner}/{repo}.git"
+  #  branch: "trunk"
+  #  formatted_file_prefix: "https://gitea.com/{owner}/{repo}/src/branch/{branch}"
+  #  repo_content_description: "API documentation for foo project"
+  
+  # Codeberg / Self-hosted Forgejo example
+  
+  #- repo_url: "https://codeberg.org/{owner}/{repo}.git"
+  #  branch: "main"
+  #  formatted_file_prefix: "https://codeberg.org/{owner}/{repo}/src/branch/{branch}"
+  #  repo_content_description: "API documentation for foo project"
+  
+  # Follow a similar pattern for any other http git hosting variants e.g. sourceforge, self-hosted 

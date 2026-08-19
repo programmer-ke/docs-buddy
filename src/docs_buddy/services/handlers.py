@@ -19,9 +19,9 @@ def sync_repository(
 ) -> None:
     """Trigger repository sync"""
 
-    use_cases.sync_repository(command.url, repo_storage)
+    use_cases.sync_repository(command.url, command.branch, repo_storage)
 
-    message_bus.publish(events.RepositorySynced(url=command.url))
+    message_bus.publish(events.RepositorySynced(url=command.url, branch=command.branch))
     message_bus.send(commands.UpdateDocumentArtifacts())
 
 

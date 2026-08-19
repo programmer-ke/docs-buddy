@@ -12,6 +12,7 @@ class SyncRepo(Command):
     """Trigger syncing of repository indicated by url"""
 
     url: str
+    branch: str
 
 
 @dataclass(frozen=True)

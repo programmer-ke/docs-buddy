@@ -31,9 +31,9 @@ class RepoStorage(Protocol):
 
     def can_clone(self) -> bool: ...
 
-    def pull_repo(self) -> None: ...
+    def pull_repo(self, branch: str) -> None: ...
 
-    def clone_repo(self, url: str) -> None: ...
+    def clone_repo(self, url: str, branch: str) -> None: ...
 
 
 class SupportsIntermediateStorage(Protocol):
@@ -74,13 +74,13 @@ class DocumentChunksPipeline(SupportsIntermediateStorage, Protocol):
     def get_document_chunks(self) -> Iterator[domain.DocumentChunk]: ...
 
 
-def sync_repository(url: str, storage: RepoStorage) -> None:
+def sync_repository(url: str, branch: str, storage: RepoStorage) -> None:
     """Synchronizes a git repository to local storage"""
 
     if storage.is_already_cloned():
-        storage.pull_repo()
+        storage.pull_repo(branch)
     elif storage.can_clone():
-        storage.clone_repo(url)
+        storage.clone_repo(url, branch)
     else:
         raise RepositorySyncError("Unable to sync repository")
 
