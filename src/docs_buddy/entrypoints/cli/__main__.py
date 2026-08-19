@@ -151,7 +151,7 @@ def main() -> None:
                 lexical_index_storage_path=data_dir / "whoosh" / repo_id,
             )
 
-            sync_repo_command = commands.SyncRepo(repo_url, branch)
+            sync_repo_command = commands.SyncRepo(url=repo_url, branch=branch)
 
             try:
                 message_bus.send(sync_repo_command)

@@ -1,13 +1,13 @@
 """Service events"""
 
-from dataclasses import dataclass
+from docs_buddy._vendor import miniattrs
 
 
 class Event:
     """Event that is generated from domain changes"""
 
 
-@dataclass(frozen=True)
+@miniattrs.define
 class RepositorySynced(Event):
     """Indicate that repository has been synced"""
 
@@ -15,11 +15,9 @@ class RepositorySynced(Event):
     branch: str
 
 
-@dataclass(frozen=True)
 class DocumentArtifactsUpdated(Event):
     """Indicate that document artifacts have been updated"""
 
 
-@dataclass(frozen=True)
 class DocumentIndexUpdated(Event):
     """Indicate that the index has been updated"""
