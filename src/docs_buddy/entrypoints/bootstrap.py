@@ -37,7 +37,7 @@ def get_message_bus(
     chunks_pipeline = adapters.FileSystemDocumentChunksPipeline(
         chunks_storage_path, lexical_index_storage_path
     )
-    whoosh_document_index = adapters.WhooshDocumentIndex()
+    whoosh_document_index = adapters.WhooshIndexBuilder()
 
     sync_repository_handler = functools.partial(
         handlers.sync_repository,

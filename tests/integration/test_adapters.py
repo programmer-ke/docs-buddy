@@ -77,11 +77,11 @@ def test_replace_destination_overwrites_existing_destination() -> None:
 
 
 def test_whoosh_document_index_fit_creates_index() -> None:
-    """Test that WhooshDocumentIndex creates an index from DocumentChunks."""
+    """Test that WhooshIndexBuilder creates an index from DocumentChunks."""
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
-        indexer = adapters.WhooshDocumentIndex()
+        indexer = adapters.WhooshIndexBuilder()
 
         chunks = [
             domain.DocumentChunk.fromstring(json.dumps(_SAMPLE_CHUNK_1)),
@@ -114,21 +114,11 @@ def test_whoosh_document_index_fit_creates_index() -> None:
                 assert "metadata" in doc
 
 
-def test_incorrectly_initialized_index_raises() -> None:
-    # initialize index without index directory
-    index = adapters.WhooshDocumentIndex()
-
-    # should raise an error on search
-    with pytest.raises(adapters.WhooshIndexError):
-        query = domain.Query("providers")
-        results = index.search(query, max_results=10)
-
-
 def test_can_search_whoosh_index() -> None:
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
-        indexer = adapters.WhooshDocumentIndex()
+        indexer = adapters.WhooshIndexBuilder()
 
         chunks = [
             domain.DocumentChunk.fromstring(json.dumps(_SAMPLE_CHUNK_1)),
@@ -139,7 +129,7 @@ def test_can_search_whoosh_index() -> None:
 
         file_prefix = "https://github.com/akash-network/website/blob/main"
 
-        document_index = adapters.WhooshDocumentIndex(temp_dir, file_prefix)
+        document_index = adapters.WhooshIndexSearcher(temp_dir, file_prefix)
         query = domain.Query("providers")
         results = document_index.search(query, max_results=10)
         assert len(results) > 1
@@ -155,7 +145,7 @@ def test_can_create_whoosh_search_tool() -> None:
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
-        indexer = adapters.WhooshDocumentIndex()
+        indexer = adapters.WhooshIndexBuilder()
 
         chunks = [
             domain.DocumentChunk.fromstring(json.dumps(_SAMPLE_CHUNK_1)),
@@ -164,7 +154,7 @@ def test_can_create_whoosh_search_tool() -> None:
 
         indexer.fit(iter(chunks), temp_dir)
 
-        document_index = adapters.WhooshDocumentIndex(temp_dir)
+        document_index = adapters.WhooshIndexSearcher(temp_dir)
 
         search = adapters.make_search_tool(
             document_index, "foo_docs", "Foo documentation"
@@ -184,11 +174,11 @@ def test_can_create_whoosh_search_tool() -> None:
 
 
 def test_whoosh_document_index_fitting_for_empty_documents() -> None:
-    """Test that WhooshDocumentIndex creates an index from DocumentChunks."""
+    """Test that WhooshIndexBuilder creates an index from DocumentChunks."""
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
-        indexer = adapters.WhooshDocumentIndex()
+        indexer = adapters.WhooshIndexBuilder()
 
         sample_chunk = {
             "chunk": "",

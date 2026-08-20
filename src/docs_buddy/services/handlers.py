@@ -63,7 +63,7 @@ def update_document_artifacts(
 
 def index_document_chunks(
     chunks_pipeline: use_cases.DocumentChunksPipeline,
-    index: use_cases.DocumentIndex,
+    index: use_cases.DocumentIndexBuilder,
     message_bus: MessageBus,
     command: commands.UpdateDocumentIndex,
 ) -> None:

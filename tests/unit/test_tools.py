@@ -7,12 +7,13 @@ def test_can_create_search_tool_over_index() -> None:
     source = ".chunks/programmmer-ke/akash-docs-buddy"
     dest = ".index/programmer-ke/akash-docs-buddy"
     pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
-    index = adapters.FakeIndex(pipeline, dest)
-    services.index_document_chunks(pipeline, index)
+    builder = adapters.FakeIndexBuilder(pipeline)
+    services.index_document_chunks(pipeline, builder)
 
     repo_description = "The foo website documentation in markdown"
     tool_id = "github_com_programmer_ke_docs_buddy"
-    search_index_tool = adapters.make_search_tool(index, tool_id, repo_description)
+    searcher = adapters.FakeIndexSearcher(pipeline, dest)
+    search_index_tool = adapters.make_search_tool(searcher, tool_id, repo_description)
 
     # when we check description, it contains the repo information
     tool_doc = search_index_tool.__doc__

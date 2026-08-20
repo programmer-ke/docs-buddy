@@ -15,7 +15,7 @@ import frontmatter
 from docs_buddy.common import PathLike, DocsBuddyError
 from docs_buddy import domain, services
 from docs_buddy.services import events, commands
-from .whoosh_index import WhooshDocumentIndex, WhooshIndexError
+from .whoosh_index import WhooshIndexBuilder, WhooshIndexSearcher
 from .agent import *
 
 log = logging.getLogger(__name__)
@@ -283,16 +283,23 @@ class FakeDocumentChunksPipeline:
         )
 
 
-class FakeIndex:
-    """Implements a document index for in memory testing"""
+class FakeIndexBuilder:
+    """Implements a document index builder for in memory indexing"""
 
-    def __init__(self, pipeline, destination=None):
+    def __init__(self, pipeline):
         self._pipeline = pipeline
-        self._destination = destination
 
     def fit(self, chunks, destination):
         """Index document chunks in memory"""
         self._pipeline.sink[destination] = list(chunks)
+
+
+class FakeIndexSearcher:
+    """Implements a document index for in memory searching"""
+
+    def __init__(self, pipeline, destination):
+        self._pipeline = pipeline
+        self._destination = destination
 
     def search(self, query, max_results):
         """Return results from the existing chunks"""
