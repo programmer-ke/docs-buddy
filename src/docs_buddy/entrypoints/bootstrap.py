@@ -29,6 +29,8 @@ def get_message_bus(
     Returns:
         A configured InMemoryMessageBus with registered command and event handlers.
     """
+
+    # todo: better message-handler mapping and dependency bootstrapping
     message_bus = adapters.InMemoryMessageBus()
     repo_storage = adapters.FileSystemRepoStorage(repository_storage_path)
     docs_storage = adapters.FileSystemDocsStorage(
