@@ -284,7 +284,7 @@ def test_find_answer_with_configured_agent() -> None:
     source = ".chunks/test-repo"
     dest = ".index/test-repo"
     pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
-    index = adapters.FakeIndex(pipeline)
+    index = adapters.FakeIndex(pipeline, dest)
     services.index_document_chunks(pipeline, index)
 
     # And an agent has been configured with a search tool

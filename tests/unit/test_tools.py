@@ -7,7 +7,7 @@ def test_can_create_search_tool_over_index() -> None:
     source = ".chunks/programmmer-ke/akash-docs-buddy"
     dest = ".index/programmer-ke/akash-docs-buddy"
     pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
-    index = adapters.FakeIndex(pipeline)
+    index = adapters.FakeIndex(pipeline, dest)
     services.index_document_chunks(pipeline, index)
 
     repo_description = "The foo website documentation in markdown"

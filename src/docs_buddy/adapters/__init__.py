@@ -179,11 +179,9 @@ class FileSystemRepoStorage:
 class FakeIntermediateStorage:
     """In memory implementation of intermediate storage provider"""
 
-    def __init__(self, destination):
+    def __init__(self, destination, sink):
         self._destination = Path(destination)
-        # todo: consider refactoring so that sink is merely
-        # manipulated here but belongs to containing object
-        self.sink = {}
+        self._sink = sink
 
     def __repr__(self):
         classname = type(self).__name__
@@ -192,18 +190,14 @@ class FakeIntermediateStorage:
     @contextmanager
     def get_temp_location(self):
         temp_location = str(self._destination) + ".tmp"
-        self.sink[temp_location] = {}
+        self._sink[temp_location] = {}
         try:
             yield temp_location
         finally:
-            self.sink.pop(temp_location, None)
-
-    @property
-    def destination_content(self):
-        return self.sink[str(self._destination)]
+            self._sink.pop(temp_location, None)
 
     def replace_destination(self, temp_location: PathLike) -> None:
-        self.sink[str(self._destination)] = self.sink.pop(temp_location)
+        self._sink[str(self._destination)] = self._sink.pop(temp_location)
 
 
 class FakeDocsStorage:
@@ -212,7 +206,8 @@ class FakeDocsStorage:
     def __init__(self, source: PathLike, destination: PathLike):
         self._source = Path(source)
         self._destination = Path(destination)
-        self._intermediate_storage = FakeIntermediateStorage(destination)
+        self._sink: dict = {}
+        self._intermediate_storage = FakeIntermediateStorage(destination, self._sink)
         self.actions: list = []
         self.read_paths: set = set()
 
@@ -227,7 +222,7 @@ class FakeDocsStorage:
 
     @property
     def sink(self):
-        return self._intermediate_storage.sink
+        return self._sink
 
     @contextmanager
     def get_temp_location(self):
@@ -247,7 +242,7 @@ class FakeDocsStorage:
     def write_to_location(
         self, content: str, path: PathLike, base_dir: PathLike
     ) -> None:
-        self._intermediate_storage.sink[str(base_dir)][str(path)] = content
+        self._sink[str(base_dir)][str(path)] = content
 
     def replace_destination(self, temp_location: PathLike) -> None:
         self._intermediate_storage.replace_destination(temp_location)
@@ -261,19 +256,15 @@ class FakeDocumentChunksPipeline:
     def __init__(self, source: PathLike, destination: PathLike):
         self._source = source
         self._destination = destination
-        self._intermediate_storage = FakeIntermediateStorage(destination)
+        self._sink: dict = {}
+        self._intermediate_storage = FakeIntermediateStorage(destination, self._sink)
 
         self._chunks = [_SAMPLE_CHUNK_1, _SAMPLE_CHUNK_2]
         self.actions: list = []
 
     @property
     def sink(self):
-        return self._intermediate_storage.sink
-
-    @property
-    def destination_content(self):
-        """ """
-        return self._intermediate_storage.destination_content
+        return self._sink
 
     @contextmanager
     def get_temp_location(self):
@@ -295,8 +286,9 @@ class FakeDocumentChunksPipeline:
 class FakeIndex:
     """Implements a document index for in memory testing"""
 
-    def __init__(self, pipeline):
+    def __init__(self, pipeline, destination=None):
         self._pipeline = pipeline
+        self._destination = destination
 
     def fit(self, chunks, destination):
         """Index document chunks in memory"""
@@ -304,7 +296,7 @@ class FakeIndex:
 
     def search(self, query, max_results):
         """Return results from the existing chunks"""
-        chunks = self._pipeline.destination_content
+        chunks = self._pipeline.sink[self._destination]
         return [
             domain.QueryResult(c.chunk, c.path, c.metadata)
             for c in chunks
