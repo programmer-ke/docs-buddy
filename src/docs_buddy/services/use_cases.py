@@ -56,12 +56,16 @@ class DocsArtifactStorage(SupportsIntermediateStorage, Protocol):
     ) -> None: ...
 
 
-class DocumentIndex(Protocol):
-    """Interface of an indexer providing fit and search capabilities"""
+class DocumentIndexBuilder(Protocol):
+    """Interface of an indexer providing fit capabilities"""
 
     def fit(
         self, chunks: Iterator[domain.DocumentChunk], destination: PathLike
     ) -> None: ...
+
+
+class DocumentIndexSearcher(Protocol):
+    """Interface of an indexer providing search capabilities"""
 
     def search(
         self, query: domain.Query, max_results: int
@@ -172,7 +176,7 @@ def composed_processor(
 
 
 def index_document_chunks(
-    pipeline: DocumentChunksPipeline, index: DocumentIndex
+    pipeline: DocumentChunksPipeline, index: DocumentIndexBuilder
 ) -> None:
     """Indexes the document chunks"""
 

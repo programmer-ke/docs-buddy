@@ -1,7 +1,7 @@
 """Domain Entities and Domain Services"""
 
 from dataclasses import dataclass, asdict
-from typing import Any, Sequence, Iterator, TypeAlias
+from typing import Any, Sequence, Iterator, TypeAlias, Self
 import json
 
 from docs_buddy import common
@@ -11,55 +11,43 @@ class InvalidQueryError(common.DocsBuddyError):
     pass
 
 
+class JSONSerializable:
+    """Mixin for JSON serializable dataclasses"""
+
+    @classmethod
+    def fromstring(cls, text: str) -> Self:
+        dict_ = json.loads(text)
+        return cls(**dict_)
+
+    def __str__(self):
+        return json.dumps(asdict(self), default=common.json_datetime_handler)
+
+
 @dataclass(frozen=True)
-class RawDocument:
+class RawDocument(JSONSerializable):
     """Representation of an unprocessed document"""
 
     content: str
     path: str
 
-    @classmethod
-    def fromstring(cls, text: str) -> "RawDocument":
-        dict_ = json.loads(text)
-        return cls(**dict_)
-
-    def __str__(self):
-        return json.dumps(asdict(self))
-
 
 @dataclass(frozen=True)
-class AnnotatedDocument:
+class AnnotatedDocument(JSONSerializable):
     """Representation of a document annotated with metadata"""
 
     content: str
     path: str
     metadata: dict[str, Any]
 
-    @classmethod
-    def fromstring(cls, text: str) -> "AnnotatedDocument":
-        dict_ = json.loads(text)
-        return cls(**dict_)
-
-    def __str__(self):
-        return json.dumps(asdict(self), default=common.json_datetime_handler)
-
 
 @dataclass(frozen=True)
-class DocumentChunk:
+class DocumentChunk(JSONSerializable):
     """Representation of a chunk of a document"""
 
     chunk: str
     index: int
     path: str
     metadata: dict[str, Any]
-
-    @classmethod
-    def fromstring(cls, text: str) -> "DocumentChunk":
-        dict_ = json.loads(text)
-        return cls(**dict_)
-
-    def __str__(self):
-        return json.dumps(asdict(self), default=common.json_datetime_handler)
 
 
 @dataclass(frozen=True)
@@ -81,36 +69,24 @@ class Query:
 
 
 @dataclass(frozen=True)
-class QueryResult:
+class QueryResult(JSONSerializable):
     """Result of an index query"""
 
     content: str
     path: str
     metadata: dict[str, Any]
 
-    def __str__(self):
-        return json.dumps(asdict(self))
-
 
 @dataclass(frozen=True)
-class QueryResponse:
+class QueryResponse(JSONSerializable):
     """Structured response for a user query"""
 
     answer: str
     citations: list[str]
 
-    def __str__(self):
-        return json.dumps(asdict(self))
-
     def __repr__(self):
         cls_name = type(self).__name__
         return f"{cls_name}({self.answer!r}, {self.citations!r})"
-
-    @classmethod
-    def fromstring(cls, text: str) -> "QueryResponse":
-        # todo: factor out json serialization
-        dict_ = json.loads(text)
-        return cls(**dict_)
 
 
 def sliding_window(seq: Sequence, size: int, step: int) -> Iterator[dict]:

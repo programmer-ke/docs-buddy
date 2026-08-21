@@ -258,7 +258,7 @@ def test_can_index_documents() -> None:
     source = ".chunks/programmmer-ke/akash-docs-buddy"
     dest = ".index/programmer-ke/akash-docs-buddy"
     pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
-    index = adapters.FakeIndex(pipeline)
+    index = adapters.FakeIndexBuilder(pipeline)
 
     assert dest not in pipeline.sink
 
@@ -284,11 +284,12 @@ def test_find_answer_with_configured_agent() -> None:
     source = ".chunks/test-repo"
     dest = ".index/test-repo"
     pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
-    index = adapters.FakeIndex(pipeline)
-    services.index_document_chunks(pipeline, index)
+    builder = adapters.FakeIndexBuilder(pipeline)
+    services.index_document_chunks(pipeline, builder)
 
     # And an agent has been configured with a search tool
-    tools = [adapters.make_search_tool(index, "foo_docs", "Foo documentation")]
+    searcher = adapters.FakeIndexSearcher(pipeline, dest)
+    tools = [adapters.make_search_tool(searcher, "foo_docs", "Foo documentation")]
     research_user_query = adapters.make_fake_research_agent(prompt="some prompt")
 
     # When user submits valid query
@@ -310,11 +311,12 @@ def test_agent_error_gracefully_handled() -> None:
     source = ".chunks/test-repo"
     dest = ".index/test-repo"
     pipeline = adapters.FakeDocumentChunksPipeline(source, dest)
-    index = adapters.FakeIndex(pipeline)
-    services.index_document_chunks(pipeline, index)
+    builder = adapters.FakeIndexBuilder(pipeline)
+    services.index_document_chunks(pipeline, builder)
 
     # And an agent has been configured with a search tool
-    tools = [adapters.make_search_tool(index, "foo_docs", "Foo documentation")]
+    searcher = adapters.FakeIndexSearcher(pipeline, dest)
+    tools = [adapters.make_search_tool(searcher, "foo_docs", "Foo documentation")]
     research_user_query = adapters.make_fake_research_agent(prompt="some prompt")
 
     # When user submits query likely to fail

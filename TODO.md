@@ -7,8 +7,6 @@ Status legend:
 
 ## todo
 
-- [ ] address todo comments
-
 - [ ] **US-008: User can submit a query via web form and receive a structured response**  
   *As a user, I want to submit a query via a web form and receive the structured response (answer + citations) rendered in the browser, so that I can use the system from a web interface.*  
   - [ ] **Scenario 8.1:** Web form query returns answer and citations  
@@ -24,6 +22,7 @@ Status legend:
 
 ## in progress
 
+- [ ] address todo comments
 
 ## done
 

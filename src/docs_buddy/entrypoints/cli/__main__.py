@@ -173,7 +173,7 @@ def main() -> None:
                 continue
 
             file_prefix = repo_config.formatted_file_prefix
-            document_index = adapters.WhooshDocumentIndex(index_path, file_prefix)
+            document_index = adapters.WhooshIndexSearcher(index_path, file_prefix)
 
             content_description = repo_config.repo_content_description
             tool_id = common.sanitize_to_python_id(repo_id)

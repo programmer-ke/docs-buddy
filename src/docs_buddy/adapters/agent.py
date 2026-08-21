@@ -81,7 +81,7 @@ class LoggingHooks(agents.RunHooks):
 
 
 def make_search_tool(
-    index: services.DocumentIndex, tool_id: str, content_information: str
+    index: services.DocumentIndexSearcher, tool_id: str, content_information: str
 ) -> Callable:
     """Creates a search tool over the index
 

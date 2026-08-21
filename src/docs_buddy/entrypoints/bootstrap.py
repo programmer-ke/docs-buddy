@@ -29,6 +29,8 @@ def get_message_bus(
     Returns:
         A configured InMemoryMessageBus with registered command and event handlers.
     """
+
+    # todo: better message-handler mapping and dependency bootstrapping
     message_bus = adapters.InMemoryMessageBus()
     repo_storage = adapters.FileSystemRepoStorage(repository_storage_path)
     docs_storage = adapters.FileSystemDocsStorage(
@@ -37,7 +39,7 @@ def get_message_bus(
     chunks_pipeline = adapters.FileSystemDocumentChunksPipeline(
         chunks_storage_path, lexical_index_storage_path
     )
-    whoosh_document_index = adapters.WhooshDocumentIndex()
+    whoosh_document_index = adapters.WhooshIndexBuilder()
 
     sync_repository_handler = functools.partial(
         handlers.sync_repository,
